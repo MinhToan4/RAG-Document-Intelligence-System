@@ -4,10 +4,8 @@ An end-to-end Retrieval-Augmented Generation platform for internal document inte
 
 ## Live Links
 
-- Frontend demo: https://rag-document-intelligence-system.vercel.app
+- Website: https://rag-document-intelligence-system.vercel.app
 - Backend health check: https://ragbackend-production-0816.up.railway.app/api/health
-- Technical report: [docs/BAO_CAO_RAG_DOCUMENT_INTELLIGENCE_SYSTEM.md](docs/BAO_CAO_RAG_DOCUMENT_INTELLIGENCE_SYSTEM.md)
-- Deployment guide: [docs/DEPLOY_RAILWAY_VERCEL.md](docs/DEPLOY_RAILWAY_VERCEL.md)
 
 ## Project Highlights
 
@@ -408,43 +406,15 @@ npm run dev
 - Frontend: http://localhost:5173
 - Backend health: http://localhost:4000/api/health
 
-## 13. Deployment
+## 13. Deployment Notes
 
-### 13.1 Production URLs
+The application is deployed with environment-specific configuration for the frontend and backend. Production values are intentionally omitted from this README; refer to the deployment configuration in your environment when needed.
 
-- Frontend: https://rag-document-intelligence-system.vercel.app
-- Backend: https://ragbackend-production-0816.up.railway.app
+The backend is built with Docker and uses production environment variables such as `NODE_ENV`, `PORT`, `DATABASE_URL`, and the JWT/database SSL settings required by the target host.
 
-### 13.2 Backend on Railway
+The frontend points to the backend through an environment variable such as `VITE_API_BASE_URL`.
 
-The backend is deployed on Railway using a Dockerfile-based build. Production variables include:
-
-- `NODE_ENV=production`
-- `PORT=4000`
-- `DATABASE_URL` pointing to Supabase PostgreSQL
-- `DB_SSL_ENABLED=true`
-- `DB_SSL_REJECT_UNAUTHORIZED=false`
-- `FRONTEND_ORIGIN=https://rag-document-intelligence-system.vercel.app`
-
-### 13.3 Frontend on Vercel
-
-The frontend is deployed on Vercel with:
-
-- `VITE_API_BASE_URL=https://ragbackend-production-0816.up.railway.app`
-
-### 13.4 Deployment Guide
-
-Full deployment steps:
-
-- [docs/DEPLOY_RAILWAY_VERCEL.md](docs/DEPLOY_RAILWAY_VERCEL.md)
-
-## 14. Technical Report
-
-For a more detailed technical explanation, architecture narrative, and bonus scorecard, see:
-
-- [docs/BAO_CAO_RAG_DOCUMENT_INTELLIGENCE_SYSTEM.md](docs/BAO_CAO_RAG_DOCUMENT_INTELLIGENCE_SYSTEM.md)
-
-## 15. Bonus Scorecard
+## 14. Bonus Scorecard
 
 Conservative score estimate for the key bonus features: **4.5/6**.
 
@@ -463,7 +433,7 @@ Why this score is reasonable:
 - Vietnamese NLP is practical and demo-ready, though not research-grade.
 - SSE is implemented as a useful expansion, but the conservative score focuses on the four strongest differentiators.
 
-## 16. Security and Reliability Notes
+## 15. Security and Reliability Notes
 
 - JWT signing uses HS512.
 - Passwords are hashed with bcrypt.
@@ -471,7 +441,7 @@ Why this score is reasonable:
 - Provider calls have retry and fallback behavior.
 - CORS is controlled by environment variables.
 
-## 17. Roadmap
+## 16. Roadmap
 
 If more time were available, the next improvements would be:
 
@@ -481,6 +451,6 @@ If more time were available, the next improvements would be:
 4. Add rate limiting and abuse protection.
 5. Improve Vietnamese NLP with smarter sentence-aware chunking and normalization.
 
-## 18. Final Note
+## 17. Final Note
 
 This project is designed to be understandable, demo-friendly, and technically defensible. The goal is not only to deliver a working RAG system, but also to show clear system thinking, clean code structure, practical trade-offs, and a product story that is easy to present during review.
