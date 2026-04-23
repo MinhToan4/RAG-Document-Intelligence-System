@@ -1,79 +1,112 @@
 # RAG Document Intelligence System
 
-Production-oriented RAG system for private document question-answering with authentication, citations, and provider/model fallback.
+An end-to-end Retrieval-Augmented Generation platform for internal document intelligence. Users can upload private documents, let the system ingest and index them automatically, and then ask grounded questions with clear source citations.
 
-## 1. What this project delivers
+## Live Links
 
-- Fullstack monorepo: backend API + frontend UI
-- User authentication (register, login, refresh token, profile update)
-- Document ingestion pipeline (upload -> parse -> chunk -> embed -> store)
-- Retrieval + grounded answer generation with citations
-- Conversation sessions (ChatGPT-style thread + message history)
-- Local development with Dockerized PostgreSQL + pgvector
-- Environment templates ready: `backend/.env.example`, `frontend/.env.example`
+- Frontend demo: https://rag-document-intelligence-system.vercel.app
+- Backend health check: https://ragbackend-production-0816.up.railway.app/api/health
+- Technical report: [docs/BAO_CAO_RAG_DOCUMENT_INTELLIGENCE_SYSTEM.md](docs/BAO_CAO_RAG_DOCUMENT_INTELLIGENCE_SYSTEM.md)
+- Deployment guide: [docs/DEPLOY_RAILWAY_VERCEL.md](docs/DEPLOY_RAILWAY_VERCEL.md)
 
-## 2. High-level architecture
+## Project Highlights
 
-### Ingestion flow
+- Full-stack monorepo with a TypeScript backend and a React + Vite frontend.
+- Document ingestion pipeline for PDF, DOCX, and TXT files.
+- Chunking with overlap to preserve contextual meaning.
+- Embedding generation and storage in PostgreSQL with pgvector.
+- Hybrid retrieval using both vector similarity and lexical candidates.
+- Grounded answer generation with citations.
+- JWT authentication and user-scoped access control.
+- Conversation history, query logs, and SSE streaming support.
+- Production deployment on Railway and Vercel.
 
-1. User uploads PDF, DOCX, or TXT.
-2. Backend parses file content.
-3. Text is chunked by configured chunk size/overlap.
-4. Chunks are embedded.
-5. Metadata + vectors are saved to PostgreSQL (pgvector).
+## 1. What This System Solves
 
-### Query flow
+This system is designed for SMEs that store important knowledge in scattered internal documents such as product specs, contracts, catalogs, and operational manuals. Instead of searching files manually, users can upload documents and ask natural-language questions to retrieve relevant context and receive a reliable answer.
 
-1. User asks a question.
-2. Question is embedded.
-3. Similar chunks are retrieved via hybrid search (vector + PostgreSQL full-text ranking).
-4. Grounded prompt is built from top chunks.
-5. Generation service answers from context only.
-6. Response returns answer + citations + resolved model.
+The core idea is not just to build a chat interface. The real goal is to implement a complete document intelligence pipeline:
 
-## 3. Why this stack (technical decisions)
+- Ingestion: receive file, validate it, extract text, split it into chunks, embed chunks, and store vectors.
+- Retrieval: embed the query, retrieve relevant chunks, and combine vector search with lexical search.
+- Generation: build a grounded prompt, ask the LLM to answer only from the retrieved context, and return citations.
+- Product layer: authentication, conversation history, observability, and a usable frontend.
 
-### Backend: Express + TypeScript (vs heavier frameworks)
+## 2. System Architecture
 
-Chosen because:
-- Fast setup and low boilerplate for challenge-to-production evolution.
-- Easy layering with controller/service/repository pattern.
-- Strong typing and maintainability via TypeScript.
+### 2.1 High-Level Flow
 
-Trade-off:
-- Less built-in structure than opinionated frameworks (for example NestJS), so discipline is required in project organization.
+```text
+Upload Document
+PDF / DOCX / TXT
+→ Parse Text
+Extract raw content
+→ Chunk
+Split with overlap
+→ Embed
+Generate vectors
+→ Store
+PostgreSQL + pgvector
 
-### Database: PostgreSQL + pgvector (vs dedicated vector DB)
+Question
+User input
+→ Embed Query
+Query vector
+→ Retrieve
+Vector + lexical candidates
+→ Generate
+LLM + grounded context
+→ Answer
+With citations
+```
 
-Chosen because:
-- One datastore for relational metadata and vector similarity.
-- Operationally simpler for small/medium teams.
-- SQL migrations and indexing are straightforward.
+### 2.2 Ingestion Pipeline
 
-Trade-off:
-- At very large retrieval scale, specialized vector engines can provide more advanced ANN tuning and horizontal scaling options.
+1. The user uploads a document.
+2. The backend validates the file type and stores the file on disk.
+3. The backend creates a document record with status `processing`.
+4. The parser extracts raw text from the file.
+5. The text is chunked with configured size and overlap.
+6. Each chunk is embedded.
+7. Chunks and embeddings are written to PostgreSQL + pgvector.
+8. The document status is updated to `ready`, or `failed` if an error occurs.
 
-### Frontend: React + Vite (vs Next.js)
+### 2.3 Query Pipeline
 
-Chosen because:
-- Fast local DX and short build times.
-- No SSR requirement for this application scope.
-- Clean separation from backend API.
+1. The user sends a question.
+2. The question is embedded.
+3. Similar chunks are retrieved using a hybrid strategy.
+4. A grounded prompt is built from the retrieved context.
+5. The generation service produces an answer from context only.
+6. The response includes answer, sources, model, and conversation ID.
 
-Trade-off:
-- No built-in SSR/edge routing features from framework-first meta frameworks.
+## 3. Why This Stack Was Chosen
 
-### Monorepo with npm workspaces (vs multi-repo)
+### Backend: Express + TypeScript
 
-Chosen because:
-- Shared tooling and synchronized development.
-- Simpler onboarding and local run.
-- Easier end-to-end refactor across FE and BE.
+Express was chosen because it is lightweight, fast to scaffold, and easy to structure with a controller-service-repository pattern. TypeScript improves type safety across DTOs, services, and repositories.
 
-Trade-off:
-- CI/CD pipelines should be configured carefully to avoid unnecessary cross-package rebuilds.
+Trade-off: compared with a more opinionated framework, the codebase requires more discipline in structure and conventions.
 
-## 4. Repository layout
+### Database: PostgreSQL + pgvector
+
+PostgreSQL with pgvector was chosen because it keeps metadata and vector search in one place. This reduces operational complexity and is very practical for a 48-hour challenge.
+
+Trade-off: at larger retrieval scales, specialized vector databases may offer additional tuning and scaling options.
+
+### Frontend: React + Vite
+
+React + Vite gives a fast developer experience and short build times. It fits this application well because SSR is not required.
+
+Trade-off: it does not provide framework-level SSR or edge-routing features out of the box.
+
+### Monorepo with npm Workspaces
+
+The project uses a monorepo to keep the frontend and backend synchronized, simplify local development, and make full-stack changes easier to manage.
+
+Trade-off: deployment and environment configuration must be handled carefully to avoid cross-package issues.
+
+## 4. Repository Structure
 
 ```text
 .
@@ -84,45 +117,272 @@ Trade-off:
 │  │  │  └─ impl/
 │  │  ├─ repositories/
 │  │  ├─ routes/
+│  │  ├─ middlewares/
 │  │  ├─ dtos/
-│  │  └─ ...
+│  │  ├─ config/
+│  │  └─ utils/
 │  ├─ scripts/
 │  ├─ sql/
 │  └─ uploads/
 ├─ frontend/
-│  └─ src/
+│  ├─ src/
+│  │  ├─ components/
+│  │  ├─ hooks/
+│  │  ├─ lib/
+│  │  └─ types/
+│  └─ ...
 ├─ docs/
 └─ docker-compose.yml
 ```
 
-## 5. Prerequisites
+## 5. Main Features
 
-- Node.js >= 18.18
+### Authentication
+
+- Register
+- Login
+- Refresh token
+- Introspect token
+- Update profile
+- JWT-based authorization
+
+### Document Intelligence
+
+- Upload PDF, DOCX, TXT
+- Parse and normalize text
+- Chunk with overlap
+- Generate embeddings
+- Store vectors in PostgreSQL + pgvector
+- Reprocess documents
+
+### Retrieval and Generation
+
+- Query embedding
+- Hybrid retrieval with vector and lexical candidates
+- Grounded answer generation
+- Citations and sources
+- SSE streaming endpoint
+
+### Product Experience
+
+- Conversation history
+- Query logs
+- Document list with status tracking
+- Profile management
+- System information tab
+
+## 6. Bonus Features Implemented
+
+### 6.1 Auth Layer
+
+The system has a full auth layer with JWT-based access control. Protected routes require authentication, and every user can only access their own documents, conversations, and query history.
+
+### 6.2 Chat History
+
+The backend stores conversations and messages so the user can continue a multi-turn interaction instead of starting over every time. This makes the system feel like a real document assistant rather than a single-question endpoint.
+
+### 6.3 Observability
+
+Each query is logged with useful operational metadata:
+
+- question
+- model name
+- topK
+- latency
+- retrieved chunk count
+- answer
+- sources
+
+This is useful for debugging retrieval quality, measuring performance, and explaining system behavior during review.
+
+### 6.4 Vietnamese NLP Support
+
+The system supports Vietnamese in a practical way:
+
+- Vietnamese questions are accepted naturally.
+- Uploaded filenames are normalized to avoid encoding issues.
+- Answer rendering handles mixed content, bullets, numbering, and citations.
+
+This is not a research-grade Vietnamese NLP pipeline, but it is strong enough for a real demo and a SME document workflow.
+
+### 6.5 Hybrid Search
+
+Retrieval is not limited to vector similarity. The system also uses lexical candidates from PostgreSQL full-text search. The combined ranking improves retrieval quality for:
+
+- exact keywords
+- product names
+- numeric values
+- domain-specific terms
+
+### 6.6 SSE Streaming
+
+The system includes a streaming endpoint that sends answer output in SSE format. The current implementation streams the generated answer text token by token, which creates a better product story and provides a foundation for true provider-level token streaming later.
+
+## 7. Backend Architecture
+
+### 7.1 Controller Layer
+
+Controllers accept requests, validate payloads, enforce auth, and return HTTP responses. They intentionally stay thin so business logic is kept in services.
+
+### 7.2 Service Layer
+
+Services handle the main application workflows:
+
+- create and ingest documents
+- reprocess documents
+- retrieve similar chunks
+- build grounded prompts
+- generate answers
+- manage conversations
+- record query logs
+
+### 7.3 Repository Layer
+
+Repositories handle database access and mapping between SQL rows and application records. This keeps SQL isolated from business logic.
+
+### 7.4 Utilities
+
+The backend includes utility modules for:
+
+- chunking
+- prompt building
+- filename normalization
+- async request handling
+- logging
+
+## 8. Database Design
+
+### 8.1 Main Tables
+
+- `users`
+- `documents`
+- `document_chunks`
+- `conversations`
+- `messages`
+- `query_logs`
+
+### 8.2 Design Goals
+
+The schema was designed to ensure:
+
+- user-scoped isolation
+- traceable document lifecycle
+- efficient chunk storage and retrieval
+- conversation persistence
+- observability and query auditing
+
+### 8.3 Why PostgreSQL + pgvector
+
+PostgreSQL + pgvector is a strong choice for this project because it keeps relational data and vector search together, which is simpler to operate and easier to deploy to Railway.
+
+## 9. Processing Pipeline Details
+
+### 9.1 Ingestion
+
+1. Upload file.
+2. Create a `processing` document record.
+3. Parse the file into raw text.
+4. Chunk the text with overlap.
+5. Generate embeddings for each chunk.
+6. Store chunks and vectors.
+7. Update the document status to `ready` or `failed`.
+
+### 9.2 Retrieval
+
+1. Embed the query.
+2. Pull vector candidates.
+3. Pull lexical candidates.
+4. Merge and re-rank candidates.
+5. Return the top chunks with score and source metadata.
+
+### 9.3 Generation
+
+1. Build a grounded prompt.
+2. Send context to the selected model/provider.
+3. Generate an answer constrained by the context.
+4. Log the query result asynchronously.
+
+## 10. Frontend Architecture
+
+### 10.1 UI Layout
+
+The frontend is organized into four primary tabs:
+
+- Workspace
+- Document Library
+- System Info
+- Profile
+
+### 10.2 Core Hooks
+
+- `useAuth`
+- `useDocuments`
+- `useQuery`
+- `useConversations`
+
+### 10.3 API Layer
+
+All frontend requests go through `frontend/src/lib/api.ts`. The API base URL is injected through `VITE_API_BASE_URL`, which makes the app portable across local development, Railway, and Vercel.
+
+## 11. API Surface
+
+Base path: `/api`
+
+### Health
+
+- `GET /health`
+
+### Auth
+
+- `POST /auth/register`
+- `POST /auth/login`
+- `POST /auth/refresh`
+- `POST /auth/introspect`
+- `PUT /auth/profile`
+
+### Documents
+
+- `POST /documents/upload`
+- `GET /documents`
+- `GET /documents/:id`
+- `DELETE /documents/:id`
+- `GET /documents/:id/chunks`
+- `POST /documents/:id/reprocess`
+
+### Query
+
+- `POST /query`
+- `POST /query/stream`
+- `GET /query/history`
+- `DELETE /query/history/:id`
+
+### Conversations
+
+- `GET /conversations`
+- `GET /conversations/:id/messages`
+- `DELETE /conversations/:id`
+
+## 12. Local Setup
+
+### Requirements
+
+- Node.js 18.18 or newer
 - Docker Desktop running
-- At least one provider API key (Gemini and/or Groq)
+- PostgreSQL with pgvector, or a remote Postgres instance
 
-## 6. Local run (clear step-by-step)
-
-### Step 1: install dependencies
+### Install dependencies
 
 ```bash
 npm install
 ```
 
-### Step 2: start PostgreSQL + pgvector
+### Start local PostgreSQL
 
 ```bash
 npm run db:up
 ```
 
-### Step 3: create env files from .env.example
-
-macOS/Linux:
-
-```bash
-cp backend/.env.example backend/.env
-cp frontend/.env.example frontend/.env
-```
+### Create environment files
 
 PowerShell:
 
@@ -131,133 +391,96 @@ Copy-Item backend/.env.example backend/.env
 Copy-Item frontend/.env.example frontend/.env
 ```
 
-### Step 4: fill required environment values
-
-Minimum backend values you must set in `backend/.env`:
-- DATABASE_URL
-- JWT_SIGN_KEY (minimum 32 chars)
-- FRONTEND_ORIGIN (for local, use `http://localhost:5173`)
-- AI provider key(s): GEMINI_API_KEY and/or GROQ_API_KEY
-
-Frontend in `frontend/.env`:
-- VITE_API_BASE_URL (for local, use `http://localhost:4000`)
-
-### Step 5: run migrations
+### Run migrations
 
 ```bash
 npm run db:migrate -w backend
 ```
 
-### Step 6: start backend + frontend
+### Start development servers
 
 ```bash
 npm run dev
 ```
 
-Open:
+### Local URLs
+
 - Frontend: http://localhost:5173
 - Backend health: http://localhost:4000/api/health
 
-### Step 7: test account (quick login)
+## 13. Deployment
 
-Use this test account to verify login quickly:
+### 13.1 Production URLs
 
-- Username: `test01`
-- Password: `Matkhau1@`
+- Frontend: https://rag-document-intelligence-system.vercel.app
+- Backend: https://ragbackend-production-0816.up.railway.app
 
-## 7. Useful scripts
+### 13.2 Backend on Railway
 
-Root:
+The backend is deployed on Railway using a Dockerfile-based build. Production variables include:
 
-```bash
-npm run dev
-npm run build
-npm run typecheck
-npm run db:up
-npm run db:down
-npm run db:logs
-```
+- `NODE_ENV=production`
+- `PORT=4000`
+- `DATABASE_URL` pointing to Supabase PostgreSQL
+- `DB_SSL_ENABLED=true`
+- `DB_SSL_REJECT_UNAUTHORIZED=false`
+- `FRONTEND_ORIGIN=https://rag-document-intelligence-system.vercel.app`
 
-Backend:
+### 13.3 Frontend on Vercel
 
-```bash
-npm run dev -w backend
-npm run build -w backend
-npm run start -w backend
-npm run db:migrate -w backend
-```
+The frontend is deployed on Vercel with:
 
-Frontend:
+- `VITE_API_BASE_URL=https://ragbackend-production-0816.up.railway.app`
 
-```bash
-npm run dev -w frontend
-npm run build -w frontend
-npm run preview -w frontend
-```
+### 13.4 Deployment Guide
 
-## 8. API surface (current)
+Full deployment steps:
 
-Base URL: `/api`
+- [docs/DEPLOY_RAILWAY_VERCEL.md](docs/DEPLOY_RAILWAY_VERCEL.md)
 
-### Health
-- GET `/health`
+## 14. Technical Report
 
-### Auth
-- POST `/auth/register`
-- POST `/auth/login`
-- POST `/auth/refresh`
-- POST `/auth/introspect`
-- PUT `/auth/profile` (authenticated)
+For a more detailed technical explanation, architecture narrative, and bonus scorecard, see:
 
-### Documents (authenticated)
-- POST `/documents/upload`
-- GET `/documents`
-- GET `/documents/:id`
-- DELETE `/documents/:id`
-- GET `/documents/:id/chunks`
-- POST `/documents/:id/reprocess`
+- [docs/BAO_CAO_RAG_DOCUMENT_INTELLIGENCE_SYSTEM.md](docs/BAO_CAO_RAG_DOCUMENT_INTELLIGENCE_SYSTEM.md)
 
-### Query (authenticated)
-- POST `/query`
-- POST `/query/stream`
+## 15. Bonus Scorecard
 
-### Conversations (authenticated)
-- GET `/conversations`
-- GET `/conversations/:id/messages`
-- DELETE `/conversations/:id`
+Conservative score estimate for the key bonus features: **4.5/6**.
 
-Legacy analytics endpoints (still available):
-- GET `/query/history`
-- DELETE `/query/history/:id`
+Completed bonus features:
 
-## 9. Security and reliability notes
+- Auth Layer
+- Chat History
+- Observability
+- Hybrid Search
+- Vietnamese NLP support
+- SSE streaming as an additional technical bonus
 
-- JWT signing algorithm: HS512.
-- Password hashing: bcrypt (10 rounds).
-- User-scoped document/query access via auth middleware.
-- Generation fallback chain supports model/provider failover.
-- Transient provider error handling includes retry (for overload statuses).
+Why this score is reasonable:
 
-## 10. If I had more time (improvement roadmap)
+- The four core bonus areas are truly implemented and useful in the product.
+- Vietnamese NLP is practical and demo-ready, though not research-grade.
+- SSE is implemented as a useful expansion, but the conservative score focuses on the four strongest differentiators.
 
-1. Add comprehensive automated tests:
-  - integration tests for auth/document/query flows
-  - contract tests for DTO validation
-2. Upgrade retrieval quality:
-  - hybrid retrieval (vector + lexical)
-  - reranking stage before generation
-3. Improve observability:
-  - structured request tracing and metrics dashboards
-  - latency/error budget reporting by provider/model
-4. Strengthen production hardening:
-  - rate limiting and abuse protection
-  - background job queue for ingestion/reprocess
-5. UX improvements:
-  - true token streaming in UI
-  - richer citation drill-down and source preview
+## 16. Security and Reliability Notes
 
-## 11. Deployment
+- JWT signing uses HS512.
+- Passwords are hashed with bcrypt.
+- Protected resources are filtered by user ID.
+- Provider calls have retry and fallback behavior.
+- CORS is controlled by environment variables.
 
-Detailed deployment guide is available in:
+## 17. Roadmap
 
-- `docs/DEPLOY_RAILWAY_VERCEL.md`
+If more time were available, the next improvements would be:
+
+1. Add reranking after retrieval.
+2. Improve token streaming to use provider-native streaming.
+3. Add structured dashboards for query latency and provider usage.
+4. Add rate limiting and abuse protection.
+5. Improve Vietnamese NLP with smarter sentence-aware chunking and normalization.
+
+## 18. Final Note
+
+This project is designed to be understandable, demo-friendly, and technically defensible. The goal is not only to deliver a working RAG system, but also to show clear system thinking, clean code structure, practical trade-offs, and a product story that is easy to present during review.
