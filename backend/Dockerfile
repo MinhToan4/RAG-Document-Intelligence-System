@@ -2,19 +2,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copy workspace package files
-COPY package.json package-lock.json ./
-COPY backend/package.json backend/
+# Copy package file
+COPY package.json ./
 
 # Install dependencies
 RUN npm install
 
 # Copy source code
-COPY backend/src ./src
-COPY backend/tsconfig.json ./
-COPY backend/tsconfig.build.json ./
-COPY backend/scripts ./scripts
-COPY backend/sql ./sql
+COPY src ./src
+COPY tsconfig.json ./
+COPY tsconfig.build.json ./
+COPY scripts ./scripts
+COPY sql ./sql
 
 # Build
 RUN npm run build
