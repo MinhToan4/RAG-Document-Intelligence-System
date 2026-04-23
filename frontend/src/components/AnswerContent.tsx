@@ -23,12 +23,32 @@ function parseLines(answer: string): string[] {
     .filter((line) => line.trim().length > 0);
 }
 
+function isCitationOnlyLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  return /^(?:\[[^\]]+\]\s*[;,]?\s*)+$/.test(trimmed);
+}
+
+function isRedundantChunkFooterLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) {
+    return false;
+  }
+
+  return /\.(pdf|docx|txt)\s*chunk\s*\d+$/i.test(trimmed) && !trimmed.includes('[');
+}
+
 export function AnswerContent({ answer }: AnswerContentProps) {
   if (!answer) {
     return <p className="muted">No answer yet.</p>;
   }
 
-  const lines = parseLines(normalizeMojibakeText(answer));
+  const lines = parseLines(normalizeMojibakeText(answer)).filter(
+    (line) => !isCitationOnlyLine(line) && !isRedundantChunkFooterLine(line),
+  );
   const blocks: ReactNode[] = [];
 
   let index = 0;

@@ -1,9 +1,10 @@
 import { useCallback, useState } from 'react';
 import { askQuestion } from '../lib/api';
-import type { ChatMessage, QuerySource } from '../types';
+import type { ChatMessage } from '../types';
 
 export function useQuery() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -24,9 +25,13 @@ export function useQuery() {
         role: m.role,
         content: m.content,
       }));
-      
-      const result = await askQuestion({ ...payload, history: historyPayload });
-      
+
+      const result = await askQuestion({
+        ...payload,
+        conversationId: conversationId ?? undefined,
+        history: historyPayload,
+      });
+
       const assistantMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -36,6 +41,9 @@ export function useQuery() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+      if (result.conversationId) {
+        setConversationId(result.conversationId);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Query failed';
       setError(message);
@@ -46,16 +54,19 @@ export function useQuery() {
 
   const clearSession = useCallback(() => {
     setMessages([]);
+    setConversationId(null);
     setError(null);
   }, []);
 
-  const restoreSession = useCallback((newMessages: ChatMessage[]) => {
+  const restoreSession = useCallback((newMessages: ChatMessage[], nextConversationId: string | null) => {
     setMessages(newMessages);
+    setConversationId(nextConversationId);
     setError(null);
   }, []);
 
   return {
     messages,
+    conversationId,
     loading,
     error,
     submit,

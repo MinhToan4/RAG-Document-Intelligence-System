@@ -8,7 +8,7 @@ Production-oriented RAG system for private document question-answering with auth
 - User authentication (register, login, refresh token, profile update)
 - Document ingestion pipeline (upload -> parse -> chunk -> embed -> store)
 - Retrieval + grounded answer generation with citations
-- Query history endpoints
+- Conversation sessions (ChatGPT-style thread + message history)
 - Local development with Dockerized PostgreSQL + pgvector
 - Environment templates ready: `backend/.env.example`, `frontend/.env.example`
 
@@ -26,7 +26,7 @@ Production-oriented RAG system for private document question-answering with auth
 
 1. User asks a question.
 2. Question is embedded.
-3. Similar chunks are retrieved via vector search.
+3. Similar chunks are retrieved via hybrid search (vector + PostgreSQL full-text ranking).
 4. Grounded prompt is built from top chunks.
 5. Generation service answers from context only.
 6. Response returns answer + citations + resolved model.
@@ -220,6 +220,13 @@ Base URL: `/api`
 ### Query (authenticated)
 - POST `/query`
 - POST `/query/stream`
+
+### Conversations (authenticated)
+- GET `/conversations`
+- GET `/conversations/:id/messages`
+- DELETE `/conversations/:id`
+
+Legacy analytics endpoints (still available):
 - GET `/query/history`
 - DELETE `/query/history/:id`
 

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState, useCallback, type FormEvent, type KeyboardEvent } from 'react';
 import { AnswerContent } from './components/AnswerContent';
 import { useAuth } from './hooks/useAuth';
+import { useConversations } from './hooks/useConversations';
 import { useDocuments } from './hooks/useDocuments';
 import { useQuery } from './hooks/useQuery';
-import { useHistory, type QueryLog } from './hooks/useHistory';
 import { normalizeMojibakeText } from './lib/text';
+import type { ChatMessage, QuerySource } from './types';
 
 type Tab = 'Workspace' | 'Document Library' | 'System Info' | 'Profile';
 
@@ -41,8 +42,24 @@ function App() {
     logout,
   } = useAuth();
   const { documents, loading, error, upload, remove } = useDocuments(Boolean(user));
-  const { messages, loading: querying, error: queryError, submit, clearSession, restoreSession } = useQuery();
-  const { history, fetchHistory, loading: historyLoading, error: historyError, deleteHistoryItem } = useHistory();
+  const {
+    messages,
+    conversationId,
+    loading: querying,
+    error: queryError,
+    submit,
+    clearSession,
+    restoreSession,
+  } = useQuery();
+  const {
+    conversations,
+    loading: conversationsLoading,
+    messageLoading,
+    error: conversationsError,
+    loadConversations,
+    loadConversationMessages,
+    removeConversation,
+  } = useConversations();
 
   const [activeTab, setActiveTab] = useState<Tab>('Workspace');
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,7 +68,7 @@ function App() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showSources, setShowSources] = useState(false);
   const [topK, setTopK] = useState<number | ''>(5);
-  const [showHistory, setShowHistory] = useState(false);
+  const [showConversations, setShowConversations] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
   const [authForm, setAuthForm] = useState({
     username: '',
@@ -75,7 +92,7 @@ function App() {
   const toastTimerRef = useRef<number | null>(null);
   const [toastState, setToastState] = useState<{ text: string; type: 'error' | 'success' } | null>(null);
 
-  const combinedError = authError ?? error ?? queryError ?? historyError;
+  const combinedError = authError ?? error ?? queryError ?? conversationsError;
   const readyDocs = useMemo(() => documents.filter((doc) => doc.status === 'ready').length, [documents]);
   const hasAnswer = messages.length > 0;
 
@@ -94,6 +111,24 @@ function App() {
     }
     return names;
   }, [messages]);
+
+  const getUniqueSourceNames = (sources?: QuerySource[]) => {
+    if (!sources || sources.length === 0) {
+      return [];
+    }
+
+    const seen = new Set<string>();
+    const names: string[] = [];
+    for (const source of sources) {
+      const name = normalizeMojibakeText(source.documentName);
+      if (seen.has(name)) {
+        continue;
+      }
+      seen.add(name);
+      names.push(name);
+    }
+    return names;
+  };
 
   const resizeComposerInput = () => {
     const input = composerInputRef.current;
@@ -126,15 +161,14 @@ function App() {
       return;
     }
 
-    try {
-      await submit({
-        question,
-        documentIds: selectedIds.length > 0 ? selectedIds : undefined,
-        topK: finalTopK,
-      });
-    } finally {
-      setSearchQuery('');
-    }
+    setSearchQuery('');
+
+    await submit({
+      question,
+      documentIds: selectedIds.length > 0 ? selectedIds : undefined,
+      topK: finalTopK,
+    });
+    void loadConversations();
   };
 
   const onComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -186,14 +220,14 @@ function App() {
   const onProfileSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (authLoading) return;
-    
+
     if (profileForm.password !== profileForm.confirmPassword) {
       showToastNotification('Passwords do not match.', 'error');
       return;
     }
 
     try {
-      await updateProfileInfo({ 
+      await updateProfileInfo({
         fullName: profileForm.fullName.trim(),
         password: profileForm.password || undefined
       });
@@ -280,7 +314,7 @@ function App() {
       setSelectedIds([]);
       setSearchQuery('');
       setShowSources(false);
-      setShowHistory(false);
+      setShowConversations(false);
       clearSession();
     }
   }, [clearSession, user]);
@@ -289,79 +323,95 @@ function App() {
     resizeComposerInput();
   }, [searchQuery]);
 
-  const openHistory = () => {
-    setShowHistory(true);
-    void fetchHistory();
+  const openConversations = () => {
+    setShowConversations(true);
+    void loadConversations();
   };
 
-  const closeHistory = () => {
-    setShowHistory(false);
+  const closeConversations = () => {
+    setShowConversations(false);
   };
 
-  const handleRestoreHistory = (item: QueryLog) => {
-    // If the database has answer stored (from newly modified DB), restore it
-    if (item.answer) {
-      restoreSession([
-        { id: crypto.randomUUID(), role: 'user', content: item.question },
-        {
-          id: crypto.randomUUID(),
-          role: 'assistant',
-          content: item.answer,
-          sources: item.sources || [],
-          model: item.modelName
-        }
-      ]);
-      setTopK(item.topK);
-      setShowHistory(false);
-    } else {
-      showToastNotification('This history entry was saved before full conversational logs were supported, so its answer cannot be restored.');
+  const parseSources = (value: QuerySource[] | null | undefined): QuerySource[] => {
+    return Array.isArray(value) ? value : [];
+  };
+
+  const handleOpenConversation = async (id: string) => {
+    try {
+      const detail = await loadConversationMessages(id);
+      const restoredMessages: ChatMessage[] = detail.messages.map((item) => ({
+        id: item.id,
+        role: item.role,
+        content: item.content,
+        sources: item.role === 'assistant' ? parseSources(item.sources ?? null) : undefined,
+        model: item.role === 'assistant' ? item.modelName ?? undefined : undefined,
+      }));
+      restoreSession(restoredMessages, detail.conversation.id);
+      setShowConversations(false);
+      setShowSources(false);
+      setActiveTab('Workspace');
+    } catch {
+      // handled by hook error state
     }
+  };
+
+  const handleDeleteConversation = (id: string) => {
+    removeConversation(id)
+      .then(() => {
+        if (conversationId === id) {
+          startNewSession();
+        }
+      })
+      .catch((err: Error) => showToastNotification(err.message));
   };
 
   return (
     <div className="app">
-      {showHistory && (
-        <div className="history-modal-backdrop" onClick={closeHistory}>
+      {showConversations && (
+        <div className="history-modal-backdrop" onClick={closeConversations}>
           <div className="history-modal" onClick={(e) => e.stopPropagation()}>
             <div className="history-header">
-              <h2>Query History</h2>
-              <button className="history-close-btn" onClick={closeHistory}>&times;</button>
+              <h2>Conversations</h2>
+              <button className="history-close-btn" onClick={closeConversations}>&times;</button>
             </div>
             <div className="history-body">
-              {historyLoading ? (
-                <p>Loading history...</p>
-              ) : history.length === 0 ? (
-                <p>No history found.</p>
+              {conversationsLoading ? (
+                <p>Loading conversations...</p>
+              ) : conversations.length === 0 ? (
+                <p>No conversations yet.</p>
               ) : (
                 <div className="history-list">
-                  {history.map((item: QueryLog) => (
+                  {conversations.map((item) => (
                     <div
                       key={item.id}
-                      className={`history-item ${item.answer ? 'restorable' : ''}`}
-                      onClick={() => handleRestoreHistory(item)}
-                      title={item.answer ? "Click to restore this chat" : "No answer data found in this log"}
+                      className="history-item restorable"
+                      onClick={() => void handleOpenConversation(item.id)}
+                      title="Open this conversation"
                     >
                       <div className="history-item-header">
-                        <p className="history-question" title={item.question}>{item.question}</p>
-                        <button 
+                        <p className="history-question" title={item.title}>
+                          {item.title}
+                        </p>
+                        <button
                           className="history-delete-btn"
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteHistoryItem(item.id).catch((err: Error) => showToastNotification(err.message));
+                            handleDeleteConversation(item.id);
                           }}
-                          title="Delete this query"
+                          title="Delete this conversation"
                         >&times;</button>
                       </div>
                       <div className="history-meta">
-                        <span className="history-meta-item">Model: {item.modelName}</span>
-                        <span className="history-meta-item">Top K: {item.topK}</span>
-                        <span className="history-meta-item">Retrieved: {item.retrievedCount}</span>
-                        <span className="history-meta-item">Date: {formatDate(item.createdAt)}</span>
+                        <span className="history-meta-item">Messages: {item.messageCount}</span>
+                        <span className="history-meta-item">
+                          Updated: {formatDate(item.lastMessageAt ?? item.updatedAt)}
+                        </span>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
+              {messageLoading && <p className="muted-text">Loading selected conversation...</p>}
             </div>
           </div>
         </div>
@@ -388,9 +438,9 @@ function App() {
               </button>
             ))}
             <div className="auth-badge-wrap">
-              <span 
-                className="auth-user-label actionable" 
-                onClick={() => setActiveTab('Profile')} 
+              <span
+                className="auth-user-label actionable"
+                onClick={() => setActiveTab('Profile')}
                 title="Go to Profile"
               >
                 Hi, {user.fullName || user.username}
@@ -430,10 +480,10 @@ function App() {
                 <button
                   type="button"
                   className="composer-secondary-btn history-floating"
-                  onClick={openHistory}
+                  onClick={openConversations}
                   disabled={querying}
                 >
-                  History
+                  Conversations
                 </button>
 
                 <div className={`panel response-panel ${hasAnswer ? 'has-answer' : 'no-answer'} ${showSources ? 'sources-open' : ''}`}>
@@ -498,6 +548,7 @@ function App() {
 
                   {hasAnswer && showSources && (
                     <div className="sources-block">
+                      <div className="sources-block-title">Nguồn tham khảo</div>
                       <div className="source-chips">
                         {sourceFiles.length === 0 ? (
                           <span className="muted-text">No sources yet.</span>
@@ -639,7 +690,7 @@ function App() {
                     citations.
                   </p>
                   <p>Supported document formats: PDF, DOCX, TXT</p>
-                  <p>Retrieval engine: Semantic vector search with pgvector chunks</p>
+                  <p>Retrieval engine: Hybrid retrieval (pgvector cosine + PostgreSQL full-text)</p>
                   <p>Generation strategy: Provider fallback chain (Gemini to Groq)</p>
                   <p>Current response model: {messages[messages.length - 1]?.model || 'Not queried yet (auto fallback enabled)'}</p>
                   <p>

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const askQueryRequestSchema = z.object({
   question: z.string().min(3, 'question must have at least 3 characters'),
+  conversationId: z.string().uuid().optional(),
   history: z
     .array(
       z.object({
@@ -15,4 +16,3 @@ export const askQueryRequestSchema = z.object({
 });
 
 export type AskQueryRequestDto = z.infer<typeof askQueryRequestSchema>;
-

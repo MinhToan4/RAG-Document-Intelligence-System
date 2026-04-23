@@ -1,4 +1,11 @@
-import type { AuthResponse, AuthUser, DocumentListResponse, QueryResponse } from '../types';
+import type {
+  AuthResponse,
+  AuthUser,
+  ConversationDetailResponse,
+  ConversationSummary,
+  DocumentListResponse,
+  QueryResponse,
+} from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 const ACCESS_TOKEN_KEY = 'rag.access_token';
@@ -163,6 +170,7 @@ export async function deleteDocument(id: string): Promise<void> {
 
 export async function askQuestion(payload: {
   question: string;
+  conversationId?: string;
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
   documentIds?: string[];
   topK?: number;
@@ -201,5 +209,29 @@ export async function deleteQueryLog(id: string): Promise<void> {
       // Ignored
     }
     throw new Error(errorMessage);
+  }
+}
+
+export async function fetchConversations(): Promise<ConversationSummary[]> {
+  const response = await fetch(`${API_BASE}/api/conversations`, {
+    headers: buildAuthHeaders(),
+  });
+  return parseJson<ConversationSummary[]>(response);
+}
+
+export async function fetchConversationMessages(conversationId: string): Promise<ConversationDetailResponse> {
+  const response = await fetch(`${API_BASE}/api/conversations/${conversationId}/messages`, {
+    headers: buildAuthHeaders(),
+  });
+  return parseJson<ConversationDetailResponse>(response);
+}
+
+export async function deleteConversation(conversationId: string): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/conversations/${conversationId}`, {
+    method: 'DELETE',
+    headers: buildAuthHeaders(),
+  });
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response));
   }
 }

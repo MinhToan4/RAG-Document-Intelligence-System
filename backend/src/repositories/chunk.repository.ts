@@ -93,49 +93,124 @@ export class ChunkRepository {
 
   async searchSimilar(
     queryEmbedding: number[],
+    queryText: string,
     topK: number,
     userId: string,
     documentIds?: string[],
   ): Promise<ChunkSearchResult[]> {
     const vectorLiteral = toSqlVector(queryEmbedding);
     const hasDocumentFilter = Boolean(documentIds && documentIds.length > 0);
+    const candidateLimit = Math.max(topK * 4, 20);
 
     const sql = hasDocumentFilter
       ? `
+        WITH vector_candidates AS (
+          SELECT dc.id
+          FROM document_chunks dc
+          INNER JOIN documents d ON d.id = dc.document_id
+          WHERE d.status = 'ready'
+            AND d.user_id = $2::uuid
+            AND dc.document_id = ANY($6::uuid[])
+          ORDER BY dc.embedding <=> $1::vector
+          LIMIT $5
+        ),
+        text_candidates AS (
+          SELECT dc.id
+          FROM document_chunks dc
+          INNER JOIN documents d ON d.id = dc.document_id
+          WHERE d.status = 'ready'
+            AND d.user_id = $2::uuid
+            AND dc.document_id = ANY($6::uuid[])
+            AND dc.content_tsv @@ plainto_tsquery('simple', $3)
+          ORDER BY ts_rank_cd(dc.content_tsv, plainto_tsquery('simple', $3)) DESC
+          LIMIT $5
+        ),
+        candidate_ids AS (
+          SELECT id FROM vector_candidates
+          UNION
+          SELECT id FROM text_candidates
+        ),
+        scored AS (
+          SELECT
+            dc.id AS chunk_id,
+            dc.document_id,
+            d.name AS document_name,
+            dc.chunk_index,
+            dc.content,
+            (1 - (dc.embedding <=> $1::vector)) AS vector_score,
+            COALESCE(ts_rank_cd(dc.content_tsv, plainto_tsquery('simple', $3)), 0) AS text_score
+          FROM document_chunks dc
+          INNER JOIN documents d ON d.id = dc.document_id
+          INNER JOIN candidate_ids c ON c.id = dc.id
+          WHERE d.status = 'ready'
+            AND d.user_id = $2::uuid
+        )
         SELECT
-          dc.id AS chunk_id,
-          dc.document_id,
-          d.name AS document_name,
-          dc.chunk_index,
-          dc.content,
-          1 - (dc.embedding <=> $1::vector) AS score
-        FROM document_chunks dc
-        INNER JOIN documents d ON d.id = dc.document_id
-        WHERE d.status = 'ready'
-          AND d.user_id = $2::uuid
-          AND dc.document_id = ANY($3::uuid[])
-        ORDER BY dc.embedding <=> $1::vector
+          chunk_id,
+          document_id,
+          document_name,
+          chunk_index,
+          content,
+          ((0.75 * vector_score) + (0.25 * text_score)) AS score
+        FROM scored
+        ORDER BY score DESC
         LIMIT $4
       `
       : `
+        WITH vector_candidates AS (
+          SELECT dc.id
+          FROM document_chunks dc
+          INNER JOIN documents d ON d.id = dc.document_id
+          WHERE d.status = 'ready'
+            AND d.user_id = $2::uuid
+          ORDER BY dc.embedding <=> $1::vector
+          LIMIT $5
+        ),
+        text_candidates AS (
+          SELECT dc.id
+          FROM document_chunks dc
+          INNER JOIN documents d ON d.id = dc.document_id
+          WHERE d.status = 'ready'
+            AND d.user_id = $2::uuid
+            AND dc.content_tsv @@ plainto_tsquery('simple', $3)
+          ORDER BY ts_rank_cd(dc.content_tsv, plainto_tsquery('simple', $3)) DESC
+          LIMIT $5
+        ),
+        candidate_ids AS (
+          SELECT id FROM vector_candidates
+          UNION
+          SELECT id FROM text_candidates
+        ),
+        scored AS (
+          SELECT
+            dc.id AS chunk_id,
+            dc.document_id,
+            d.name AS document_name,
+            dc.chunk_index,
+            dc.content,
+            (1 - (dc.embedding <=> $1::vector)) AS vector_score,
+            COALESCE(ts_rank_cd(dc.content_tsv, plainto_tsquery('simple', $3)), 0) AS text_score
+          FROM document_chunks dc
+          INNER JOIN documents d ON d.id = dc.document_id
+          INNER JOIN candidate_ids c ON c.id = dc.id
+          WHERE d.status = 'ready'
+            AND d.user_id = $2::uuid
+        )
         SELECT
-          dc.id AS chunk_id,
-          dc.document_id,
-          d.name AS document_name,
-          dc.chunk_index,
-          dc.content,
-          1 - (dc.embedding <=> $1::vector) AS score
-        FROM document_chunks dc
-        INNER JOIN documents d ON d.id = dc.document_id
-        WHERE d.status = 'ready'
-          AND d.user_id = $2::uuid
-        ORDER BY dc.embedding <=> $1::vector
-        LIMIT $3
+          chunk_id,
+          document_id,
+          document_name,
+          chunk_index,
+          content,
+          ((0.75 * vector_score) + (0.25 * text_score)) AS score
+        FROM scored
+        ORDER BY score DESC
+        LIMIT $4
       `;
 
     const params = hasDocumentFilter
-      ? [vectorLiteral, userId, documentIds, topK]
-      : [vectorLiteral, userId, topK];
+      ? [vectorLiteral, userId, queryText, topK, candidateLimit, documentIds]
+      : [vectorLiteral, userId, queryText, topK, candidateLimit];
     const result = await query<DbChunkSearchRow>(sql, params);
 
     return result.rows.map((row) => ({

@@ -54,6 +54,27 @@ export type QueryResponse = {
     score: number;
   }>;
   model: string;
+  conversationId?: string;
+};
+
+export type ConversationRecord = {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  lastMessageAt: string | null;
+  messageCount: number;
+};
+
+export type ConversationMessageRecord = {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources: unknown | null;
+  modelName: string | null;
+  createdAt: string;
 };
 
 export type JwtTokenType = 'ACCESS' | 'REFRESH';

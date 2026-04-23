@@ -22,6 +22,7 @@ export class RetrievalServiceImpl implements IRetrievalService {
     const queryEmbedding = await this.embeddingService.embedText(input.question);
     const chunks = await this.chunkRepository.searchSimilar(
       queryEmbedding,
+      input.question,
       topK,
       input.userId,
       input.documentIds,

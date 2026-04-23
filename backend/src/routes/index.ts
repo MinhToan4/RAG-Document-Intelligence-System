@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { authRouter } from './auth.routes.js';
+import { conversationRouter } from './conversation.routes.js';
 import { documentRouter } from './document.routes.js';
 import { queryRouter } from './query.routes.js';
 
@@ -16,5 +17,6 @@ router.get('/health', (_req, res) => {
 router.use('/auth', authRouter);
 router.use('/documents', authMiddleware, documentRouter);
 router.use('/query', authMiddleware, queryRouter);
+router.use('/conversations', authMiddleware, conversationRouter);
 
 export { router as apiRouter };

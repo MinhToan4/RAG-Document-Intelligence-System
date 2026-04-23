@@ -28,6 +28,7 @@ export type QueryResponse = {
   answer: string;
   sources: QuerySource[];
   model: string;
+  conversationId?: string;
 };
 
 export type AuthUser = {
@@ -52,4 +53,29 @@ export type ChatMessage = {
   content: string;
   sources?: QuerySource[];
   model?: string;
+};
+
+export type ConversationSummary = {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  lastMessageAt: string | null;
+  messageCount: number;
+};
+
+export type ConversationMessage = {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources: QuerySource[] | null;
+  modelName: string | null;
+  createdAt: string;
+};
+
+export type ConversationDetailResponse = {
+  conversation: ConversationSummary;
+  messages: ConversationMessage[];
 };
