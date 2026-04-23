@@ -1,11 +1,50 @@
-import { useState } from 'react';
-import { clearAuth, getCurrentUser, login, register } from '../lib/api';
+import { useCallback, useEffect, useState } from 'react';
+import { AUTH_SESSION_EXPIRED_EVENT, clearAuth, getAuthMeta, getCurrentUser, login, register } from '../lib/api';
 import type { AuthUser } from '../types';
 
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(() => getCurrentUser());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const logout = useCallback(() => {
+    clearAuth();
+    setUser(null);
+    setError(null);
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const meta = getAuthMeta();
+    if (!meta) {
+      logout();
+      return;
+    }
+
+    const remainingMs = meta.accessTokenExpiresAt - Date.now();
+    if (remainingMs <= 0) {
+      logout();
+      return;
+    }
+
+    const timerId = window.setTimeout(() => {
+      logout();
+    }, remainingMs);
+
+    const handleSessionExpired = () => {
+      setUser(null);
+      setError(null);
+    };
+
+    window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => {
+      window.clearTimeout(timerId);
+      window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleSessionExpired);
+    };
+  }, [logout, user]);
 
   const loginWithPassword = async (payload: { username: string; password: string }) => {
     setLoading(true);
@@ -42,12 +81,6 @@ export function useAuth() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const logout = () => {
-    clearAuth();
-    setUser(null);
-    setError(null);
   };
 
   const updateProfileInfo = async (payload: { fullName: string; password?: string }) => {

@@ -53,6 +53,7 @@ export type ChatMessage = {
   content: string;
   sources?: QuerySource[];
   model?: string;
+  isStreaming?: boolean;
 };
 
 export type ConversationSummary = {

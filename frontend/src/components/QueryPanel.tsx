@@ -70,7 +70,7 @@ export function QueryPanel({
           <h3>Answer</h3>
           {model && <span className="muted">Model: {model}</span>}
         </div>
-        <AnswerContent answer={answer} />
+        <AnswerContent answer={answer} isStreaming={loading} />
       </section>
 
       <section className="sources">

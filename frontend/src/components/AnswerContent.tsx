@@ -3,6 +3,7 @@ import { normalizeMojibakeText } from '../lib/text';
 
 type AnswerContentProps = {
   answer: string;
+  isStreaming?: boolean;
 };
 
 function renderInlineBold(text: string): ReactNode[] {
@@ -47,8 +48,18 @@ function isRedundantChunkFooterLine(line: string): boolean {
   return /\.(pdf|docx|txt)\s*chunk\s*\d+$/i.test(trimmed);
 }
 
-export function AnswerContent({ answer }: AnswerContentProps) {
+export function AnswerContent({ answer, isStreaming = false }: AnswerContentProps) {
   if (!answer) {
+    if (isStreaming) {
+      return (
+        <div className="answer-content answer-content-streaming" aria-live="polite">
+          <p className="answer-paragraph answer-streaming-line">
+            <span className="answer-streaming-cursor" aria-hidden="true" />
+          </p>
+        </div>
+      );
+    }
+
     return <p className="muted">No answer yet.</p>;
   }
 
@@ -106,5 +117,10 @@ export function AnswerContent({ answer }: AnswerContentProps) {
     index += 1;
   }
 
-  return <div className="answer-content">{blocks}</div>;
+  return (
+    <div className={`answer-content ${isStreaming ? 'answer-content-streaming' : ''}`.trim()} aria-live="polite">
+      {blocks}
+      {isStreaming && <span className="answer-streaming-cursor" aria-hidden="true" />}
+    </div>
+  );
 }

@@ -499,9 +499,20 @@ function App() {
                               </div>
                             ) : (
                               <div className="assistant-message">
-                                <strong>Assistant</strong>
-                                <AnswerContent answer={message.content} />
-                                {message.model && <small className="muted-text">Model: {message.model}</small>}
+                                <div className="assistant-message-header">
+                                  <strong>Assistant</strong>
+                                  {message.isStreaming && (
+                                    <span className="assistant-thinking" aria-label="Assistant is thinking">
+                                      <span className="assistant-thinking-dots" aria-hidden="true">
+                                        <span />
+                                        <span />
+                                        <span />
+                                      </span>
+                                    </span>
+                                  )}
+                                </div>
+                                <AnswerContent answer={message.content} isStreaming={message.isStreaming} />
+                                {message.model && !message.isStreaming && <small className="muted-text">Model: {message.model}</small>}
                               </div>
                             )}
                           </div>
