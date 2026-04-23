@@ -38,7 +38,13 @@ function isRedundantChunkFooterLine(line: string): boolean {
     return false;
   }
 
-  return /\.(pdf|docx|txt)\s*chunk\s*\d+$/i.test(trimmed) && !trimmed.includes('[');
+  // Only match footer spam like "file.pdfchunk 3" (no dash, no brackets)
+  // Do NOT match citations in format "[file.pdf - chunk 3]"
+  if (trimmed.includes('[') || trimmed.includes(']')) {
+    return false; // Keep lines with brackets (valid citation format)
+  }
+
+  return /\.(pdf|docx|txt)\s*chunk\s*\d+$/i.test(trimmed);
 }
 
 export function AnswerContent({ answer }: AnswerContentProps) {

@@ -144,11 +144,15 @@ function buildModelOrder(provider: Provider): string[] {
   return uniquePreserveOrder([env.LLM_MODEL, ...parseCsv(env.LLM_FALLBACK_MODELS)]);
 }
 
-function apiKeyForProvider(provider: Provider): string | undefined {
+function apiKeysForProvider(provider: Provider): string[] {
   if (provider === 'gemini') {
-    return env.GEMINI_API_KEY;
+    const keys = [env.GEMINI_API_KEY];
+    if (env.GEMINI_API_KEY_SECONDARY) {
+      keys.push(env.GEMINI_API_KEY_SECONDARY);
+    }
+    return keys.filter((k): k is string => Boolean(k));
   }
-  return env.GROQ_API_KEY;
+  return env.GROQ_API_KEY ? [env.GROQ_API_KEY] : [];
 }
 
 export class GenerationServiceImpl implements IGenerationService {
@@ -164,10 +168,10 @@ export class GenerationServiceImpl implements IGenerationService {
     const providerOrder = buildProviderOrder();
     for (let providerIndex = 0; providerIndex < providerOrder.length; providerIndex += 1) {
       const provider = providerOrder[providerIndex];
-      const apiKey = apiKeyForProvider(provider);
+      const apiKeys = apiKeysForProvider(provider);
       const models = buildModelOrder(provider);
 
-      if (!apiKey) {
+      if (apiKeys.length === 0) {
         logger.warn('Skipping provider due to missing API key.', { provider });
         continue;
       }
@@ -175,15 +179,33 @@ export class GenerationServiceImpl implements IGenerationService {
       for (let modelIndex = 0; modelIndex < models.length; modelIndex += 1) {
         const model = models[modelIndex];
         try {
-          const answer =
-            provider === 'gemini'
-              ? await this.generateWithGemini(prompt, apiKey, model, history)
-              : await this.generateWithGroq(prompt, apiKey, model, history);
+          let lastError: Error | null = null;
+          for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex += 1) {
+            const apiKey = apiKeys[keyIndex];
+            try {
+              const answer =
+                provider === 'gemini'
+                  ? await this.generateWithGemini(prompt, apiKey, model, history)
+                  : await this.generateWithGroq(prompt, apiKey, model, history);
+              return { answer, model };
+            } catch (error) {
+              const status = extractStatusCode(error);
+              if (status === 429 && keyIndex < apiKeys.length - 1) {
+                logger.warn('API key rate limited. Trying next API key.', {
+                  provider,
+                  model,
+                  keyIndex: keyIndex + 1,
+                });
+                lastError = error as Error;
+                continue;
+              }
+              throw error;
+            }
+          }
+          if (lastError) {
+            throw lastError;
+          }
 
-          return {
-            answer,
-            model,
-          };
         } catch (error) {
           const hasNextModel = modelIndex < models.length - 1;
           const hasNextProvider = providerIndex < providerOrder.length - 1;

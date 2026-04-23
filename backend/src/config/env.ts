@@ -11,6 +11,7 @@ const envSchema = z.object({
   DB_SSL_REJECT_UNAUTHORIZED: z.enum(['true', 'false']).optional(),
   AI_PROVIDER: z.enum(['gemini', 'groq']).default('gemini'),
   GEMINI_API_KEY: z.string().optional(),
+  GEMINI_API_KEY_SECONDARY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),
   EMBEDDING_MODEL: z.string().min(1).default('gemini-embedding-001'),
   LLM_MODEL: z.string().min(1).default('gemini-2.5-flash'),
