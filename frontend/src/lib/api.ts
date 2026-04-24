@@ -4,8 +4,36 @@ import type {
   ConversationDetailResponse,
   ConversationSummary,
   DocumentListResponse,
+  QuerySource,
   QueryResponse,
 } from '../types';
+
+type StreamCompleteData = {
+  sources: QuerySource[];
+  model: string;
+  conversationId?: string;
+};
+
+function isQuerySourceArray(value: unknown): value is QuerySource[] {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+
+  return value.every((item) => {
+    if (!item || typeof item !== 'object') {
+      return false;
+    }
+
+    const source = item as Record<string, unknown>;
+    return (
+      typeof source.documentId === 'string' &&
+      typeof source.documentName === 'string' &&
+      typeof source.chunkIndex === 'number' &&
+      typeof source.snippet === 'string' &&
+      typeof source.score === 'number'
+    );
+  });
+}
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000';
 const ACCESS_TOKEN_KEY = 'rag.access_token';
@@ -259,7 +287,7 @@ export async function askQuestionStream(
     topK?: number;
   },
   onToken: (token: string) => void,
-  onComplete: (data: { sources: unknown; model: string; conversationId: string }) => void,
+  onComplete: (data: StreamCompleteData) => void,
   onError: (error: Error) => void,
 ): Promise<void> {
   const response = await fetch(`${API_BASE}/api/query/stream`, {
@@ -306,9 +334,9 @@ export async function askQuestionStream(
 
             if (data.done) {
               onComplete({
-                sources: data.sources,
-                model: data.model,
-                conversationId: data.conversationId,
+                sources: isQuerySourceArray(data.sources) ? data.sources : [],
+                model: typeof data.model === 'string' ? data.model : 'unknown',
+                conversationId: typeof data.conversationId === 'string' ? data.conversationId : undefined,
               });
             } else if (data.token) {
               onToken(data.token);
@@ -327,9 +355,9 @@ export async function askQuestionStream(
         const data = JSON.parse(jsonStr);
         if (data.done) {
           onComplete({
-            sources: data.sources,
-            model: data.model,
-            conversationId: data.conversationId,
+            sources: isQuerySourceArray(data.sources) ? data.sources : [],
+            model: typeof data.model === 'string' ? data.model : 'unknown',
+            conversationId: typeof data.conversationId === 'string' ? data.conversationId : undefined,
           });
         } else if (data.token) {
           onToken(data.token);
