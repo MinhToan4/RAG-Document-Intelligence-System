@@ -72,24 +72,24 @@ An intelligent platform that automates document understanding through retrieval-
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      DOCUMENT INGESTION                          │
+│                      DOCUMENT INGESTION                         │
 ├─────────────────────────────────────────────────────────────────┤
-│  Upload → Parse → Normalize → Chunk → Embed → Store → Index    │
-│  (PDF)    (Text)  (Clean)   (Split)  (Vector) (PG)   (Ready)   │
+│  Upload → Parse → Normalize → Chunk → Embed → Store → Index     │
+│  (PDF)    (Text)  (Clean)   (Split)  (Vector) (PG)   (Ready)    │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                         QUERY PROCESSING                          │
+│                         QUERY PROCESSING                        │
 ├─────────────────────────────────────────────────────────────────┤
 │ Question → Embed → Retrieve → Rerank → Generate → Stream        │
-│ (Input)   (Vector) (Hybrid)  (Rank)   (LLM)     (Real-time)    │
+│ (Input)   (Vector) (Hybrid)  (Rank)   (LLM)     (Real-time)     │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                       CONVERSATIONAL INTERFACE                    │
+│                       CONVERSATIONAL INTERFACE                  │
 ├─────────────────────────────────────────────────────────────────┤
 │  Answer with Sources → Update History → Enable Follow-ups       │
-│  (Citations)         (Persistence)    (Context)                │
+│  (Citations)         (Persistence)    (Context)                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -235,7 +235,7 @@ Include Sources, Model, Conversation ID
 
 ```
 Incoming Question
-        ├─→ [Vector Search]        ├─→ [Lexical Search]
+        ├─→ [Vector Search]         ├─→ [Lexical Search]
         │   Embed query             │   PostgreSQL full-text
         │   Find similar chunks     │   Find keyword matches
         │   (top 10 results)        │   (top 10 results)
@@ -263,17 +263,17 @@ Frontend (Fetch API)          Backend (Express)
         │                           │
         ├─→ POST /api/query/stream  │
         │                           │
-        │                    ┌─→ Embed query
-        │                    │─→ Retrieve context
-        │                    │─→ Call LLM with stream=true
+        │                           ┌─→ Embed query
+        │                           │─→ Retrieve context
+        │                           │─→ Call LLM with stream=true
         │                           │
         │← SSE: data: {token}       │
         │← SSE: data: {token}       ├─→ Stream tokens from LLM
         │← SSE: data: {token}       │
-        │                    ┌─→ Format as newline-delimited JSON
+        │                           ┌─→ Format as newline-delimited JSON
         │← SSE: data: {done, sources, model}
-        │                    ─→ Close stream
-        ├─→ Close reader            │
+        │─→ Close stream
+        ├─→ Close reader            
         │
 Update UI in real-time (progressive rendering)
 ```
@@ -376,11 +376,7 @@ RAG-Document-Intelligence-System/
 │
 ├── 📚 docs/                      # Comprehensive documentation
 │   ├── ARCHITECTURE.md           # System architecture details
-│   ├── API_SPEC.md              # Complete API reference
-│   ├── PRODUCTION_DEPLOYMENT_GUIDE.md
-│   ├── DEPLOYMENT_CHECKLIST.md
-│   ├── TECH_BONUS_SSE_STREAMING.md
-│   ├── SSE_STREAMING_GUIDE.md
+│   ├── API_SPEC.md               # Complete API reference
 │   └── ...
 │
 ├── 📋 Configuration Files
@@ -490,7 +486,6 @@ DELETE /conversations/:id
   │─ Response: { success: true }
 ```
 
-For complete API specification, see [API_SPEC.md](./docs/API_SPEC.md)
 
 ---
 
@@ -751,20 +746,20 @@ npm run lint
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    Users (Internet)                       │
+│                    Users (Internet)                      │
 ├──────────────────────────────────────────────────────────┤
-│                                                           │
-│  ┌─────────────────┐         ┌─────────────────────┐   │
-│  │  Vercel (CDN)   │         │  Railway Container  │   │
-│  │  React Frontend │─────────│  Express Backend    │   │
-│  │                 │         │                     │   │
-│  └─────────────────┘         └────────────┬────────┘   │
-│                                           │             │
-│  (Automatic Deploy from GitHub)   ┌──────▼──────┐     │
-│                                   │  Supabase   │     │
-│                                   │ PostgreSQL  │     │
-│                                   │ + pgvector  │     │
-│                                   └─────────────┘     │
+│                                                          │
+│  ┌─────────────────┐         ┌─────────────────────┐     │
+│  │  Vercel (CDN)   │         │  Railway Container  │     │
+│  │  React Frontend │─────────│  Express Backend    │     │
+│  │                 │         │                     │     │
+│  └─────────────────┘         └────────────┬────────┘     │
+│                                           │              │
+│  (Automatic Deploy from GitHub)   ┌──────▼──────┐        │
+│                                   │  Supabase   │        │
+│                                   │ PostgreSQL  │        │
+│                                   │ + pgvector  │        │
+│                                   └─────────────┘        │
 └──────────────────────────────────────────────────────────┘
 ```
 
@@ -815,8 +810,6 @@ npm run lint
 2. Configure HTTPS enforcement
 3. Set up API rate limiting
 4. Enable security headers
-
-For detailed deployment guide, see [PRODUCTION_DEPLOYMENT_GUIDE.md](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md)
 
 ---
 
@@ -976,9 +969,6 @@ Complete documentation is available in the `/docs` folder:
 - [**ARCHITECTURE.md**](./docs/ARCHITECTURE.md) - System design and data flow
 - [**API_SPEC.md**](./docs/API_SPEC.md) - Complete REST API specification
 
-### 📖 User Guides
-
-- [**HUONG_DAN_NGUOI_DUNG_VA_LUONG_HE_THONG.md**](./docs/HUONG_DAN_NGUOI_DUNG_VA_LUONG_HE_THONG.md) - Vietnamese user guide
 
 ---
 
@@ -1012,8 +1002,6 @@ Complete documentation is available in the `/docs` folder:
 ### Troubleshooting
 
 For common issues and solutions:
-- Check [DEPLOYMENT_CHECKLIST.md](./docs/DEPLOYMENT_CHECKLIST.md)
-- Review [PRODUCTION_DEPLOYMENT_GUIDE.md](./docs/PRODUCTION_DEPLOYMENT_GUIDE.md) troubleshooting section
 - Inspect Railway/Vercel logs for deployment errors
 - Run local development setup for debugging
 
@@ -1066,14 +1054,6 @@ This project is licensed under the **MIT License** - see the LICENSE file for de
 ---
 
 ## 📞 Contact & Support
-
-**Project Repository**: [GitHub Link]  
+  
 **Live Application**: https://rag-document-intelligence-system.vercel.app  
 **Backend API**: https://ragbackend-production-0816.up.railway.app  
-**Documentation**: See `/docs` folder  
-
----
-
-**Last Updated**: April 2024  
-**Status**: ✅ **Production Ready**  
-**Bonus Score**: 5.5+/6 🏆
