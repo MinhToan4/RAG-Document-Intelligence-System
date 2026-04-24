@@ -1,7 +1,14 @@
 import { env } from '../../config/env.js';
 import { ChunkRepository } from '../../repositories/chunk.repository.js';
+import { DocumentRepository } from '../../repositories/document.repository.js';
 import { QueryLogRepository } from '../../repositories/query_log.repository.js';
 import type { QueryResponse } from '../../types/index.js';
+import {
+  buildAvailableDocumentsAnswer,
+  detectQuestionLanguage,
+  fallbackAnswerForLanguage,
+  isListAvailableDocumentsIntent,
+} from '../../utils/language.js';
 import { EmbeddingServiceImpl } from './embedding.service.impl.js';
 import type { IEmbeddingService } from './embedding.service.interface.js';
 import { GenerationServiceImpl } from './generation.service.impl.js';
@@ -13,12 +20,49 @@ export class RetrievalServiceImpl implements IRetrievalService {
     private readonly embeddingService: IEmbeddingService = new EmbeddingServiceImpl(),
     private readonly generationService: IGenerationService = new GenerationServiceImpl(),
     private readonly chunkRepository = new ChunkRepository(),
+    private readonly documentRepository = new DocumentRepository(),
     private readonly queryLogRepository = new QueryLogRepository(),
   ) { }
 
   async ask(input: AskInput): Promise<QueryResponse> {
     const startMs = Date.now();
     const topK = input.topK ?? env.TOP_K_DEFAULT;
+    const questionLanguage = detectQuestionLanguage(input.question);
+    const fallbackAnswer = fallbackAnswerForLanguage(questionLanguage);
+
+    if (isListAvailableDocumentsIntent(input.question)) {
+      const readyDocuments = await this.documentRepository.list({
+        userId: input.userId,
+        page: 1,
+        limit: 200,
+        status: 'ready',
+      });
+
+      const answerText = buildAvailableDocumentsAnswer(
+        questionLanguage,
+        readyDocuments.data.map((document) => document.name),
+      );
+
+      this.queryLogRepository.logQuery({
+        userId: input.userId,
+        question: input.question,
+        modelName: 'system',
+        topK,
+        latencyMs: Date.now() - startMs,
+        inputTokens: null,
+        outputTokens: null,
+        retrievedCount: 0,
+        answer: answerText,
+        sources: [],
+      }).catch((err) => console.error('Failed to log query:', err));
+
+      return {
+        answer: answerText,
+        sources: [],
+        model: 'system',
+      };
+    }
+
     const queryEmbedding = await this.embeddingService.embedText(input.question);
     const chunks = await this.chunkRepository.searchSimilar(
       queryEmbedding,
@@ -28,11 +72,16 @@ export class RetrievalServiceImpl implements IRetrievalService {
       input.documentIds,
     );
 
-    let answerText = 'No relevant information was found in the provided documents.';
+    let answerText = fallbackAnswer;
     let usedModel = env.LLM_MODEL;
 
     if (chunks.length > 0) {
-      const generationResult = await this.generationService.generateAnswer(input.question, chunks, input.history);
+      const generationResult = await this.generationService.generateAnswer(
+        input.question,
+        chunks,
+        input.history,
+        questionLanguage,
+      );
       answerText = generationResult.answer;
       usedModel = generationResult.model;
     }

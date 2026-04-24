@@ -1,6 +1,15 @@
 import type { ChunkSearchResult } from '../types/index.js';
+import {
+  fallbackAnswerForLanguage,
+  instructionLanguageName,
+  type SupportedQuestionLanguage,
+} from './language.js';
 
-export function buildGroundedPrompt(question: string, chunks: ChunkSearchResult[]): string {
+export function buildGroundedPrompt(
+  question: string,
+  chunks: ChunkSearchResult[],
+  language: SupportedQuestionLanguage,
+): string {
   const context = chunks
     .map(
       (chunk, idx) =>
@@ -10,11 +19,16 @@ export function buildGroundedPrompt(question: string, chunks: ChunkSearchResult[
     )
     .join('\n\n');
 
+  const fallbackAnswer = fallbackAnswerForLanguage(language);
+  const languageName = instructionLanguageName(language);
+
   return [
     'You are a document QA assistant.',
     'Only answer using the provided context.',
     'If the context does not contain the answer, reply exactly:',
-    '"No relevant information was found in the provided documents."',
+    `"${fallbackAnswer}"`,
+    `Always answer in ${languageName}.`,
+    'Do not mix answer language with another language unless quoting source text.',
     'Return the answer in clean markdown format with short sections and bullet points when appropriate.',
     'Do not output one long paragraph.',
     'IMPORTANT: When citing sources, include citations INLINE in your answer using this exact format: [filename.pdf - chunk N] or [filename.docx - chunk N].',

@@ -1,5 +1,10 @@
 import { env } from '../../config/env.js';
 import type { ChunkSearchResult } from '../../types/index.js';
+import {
+  detectQuestionLanguage,
+  fallbackAnswerForLanguage,
+  type SupportedQuestionLanguage,
+} from '../../utils/language.js';
 import { buildGroundedPrompt } from '../../utils/prompt.js';
 import { logger } from '../../utils/logger.js';
 import type { GenerationResult, IGenerationService } from './generation.service.interface.js';
@@ -27,8 +32,6 @@ type GeminiGenerationResponse = {
 const MAX_RETRIES = 2;
 const BASE_DELAY_MS = 600;
 const FALLBACK_STATUS_CODES = new Set([403, 404, 408, 409, 429, 500, 502, 503, 504]);
-const NO_CONTEXT_FALLBACK_ANSWER = 'No relevant information was found in the provided documents.';
-
 function parseCsv(raw: string | undefined): string[] {
   if (!raw) {
     return [];
@@ -161,9 +164,12 @@ export class GenerationServiceImpl implements IGenerationService {
   async generateAnswer(
     question: string,
     chunks: ChunkSearchResult[],
-    history?: Array<{ role: 'user' | 'assistant'; content: string }>
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>,
+    language?: SupportedQuestionLanguage,
   ): Promise<GenerationResult> {
-    const prompt = buildGroundedPrompt(question, chunks);
+    const answerLanguage = language ?? detectQuestionLanguage(question);
+    const fallbackAnswer = fallbackAnswerForLanguage(answerLanguage);
+    const prompt = buildGroundedPrompt(question, chunks, answerLanguage);
 
     const providerOrder = buildProviderOrder();
     for (let providerIndex = 0; providerIndex < providerOrder.length; providerIndex += 1) {
@@ -185,8 +191,8 @@ export class GenerationServiceImpl implements IGenerationService {
             try {
               const answer =
                 provider === 'gemini'
-                  ? await this.generateWithGemini(prompt, apiKey, model, history)
-                  : await this.generateWithGroq(prompt, apiKey, model, history);
+                  ? await this.generateWithGemini(prompt, apiKey, model, history, fallbackAnswer)
+                  : await this.generateWithGroq(prompt, apiKey, model, history, fallbackAnswer);
               return { answer, model };
             } catch (error) {
               const status = extractStatusCode(error);
@@ -237,7 +243,7 @@ export class GenerationServiceImpl implements IGenerationService {
     const topChunk = chunks[0];
     if (!topChunk) {
       return {
-        answer: NO_CONTEXT_FALLBACK_ANSWER,
+        answer: fallbackAnswer,
         model: 'mock',
       };
     }
@@ -258,7 +264,8 @@ export class GenerationServiceImpl implements IGenerationService {
     prompt: string,
     apiKey: string,
     model: string,
-    history?: Array<{ role: 'user' | 'assistant'; content: string }>
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>,
+    fallbackAnswer?: string,
   ): Promise<string> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
@@ -290,19 +297,21 @@ export class GenerationServiceImpl implements IGenerationService {
     );
 
     const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? '').join('') ?? '';
-    return text.trim() || NO_CONTEXT_FALLBACK_ANSWER;
+    return text.trim() || fallbackAnswer || 'No relevant information was found in the provided documents.';
   }
 
   private async generateWithGroq(
     prompt: string,
     apiKey: string,
     model: string,
-    history?: Array<{ role: 'user' | 'assistant'; content: string }>
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>,
+    fallbackAnswer?: string,
   ): Promise<string> {
     const messages: Array<{ role: string; content: string }> = [
       {
         role: 'system',
-        content: 'You answer strictly from provided context. If missing context, answer with fallback sentence exactly.',
+        content:
+          'You answer strictly from provided context and follow the user prompt instructions exactly, including response language and exact fallback sentence.',
       },
     ];
 
@@ -333,6 +342,6 @@ export class GenerationServiceImpl implements IGenerationService {
     );
 
     const text = payload.choices?.[0]?.message?.content?.trim();
-    return text || NO_CONTEXT_FALLBACK_ANSWER;
+    return text || fallbackAnswer || 'No relevant information was found in the provided documents.';
   }
 }

@@ -1,4 +1,5 @@
 import type { ChunkSearchResult } from '../../types/index.js';
+import type { SupportedQuestionLanguage } from '../../utils/language.js';
 
 export type GenerationResult = {
   answer: string;
@@ -10,5 +11,6 @@ export interface IGenerationService {
     question: string,
     chunks: ChunkSearchResult[],
     history?: Array<{ role: 'user' | 'assistant'; content: string }>,
+    language?: SupportedQuestionLanguage,
   ): Promise<GenerationResult>;
 }
