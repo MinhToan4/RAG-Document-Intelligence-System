@@ -1,46 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { askQuestion } from '../lib/api';
+import { askQuestion, askQuestionStream } from '../lib/api';
 import type { ChatMessage } from '../types';
-
-function splitAnswerIntoChunks(answer: string): string[] {
-  const normalized = answer.replace(/\r\n/g, '\n');
-  const tokens = normalized.match(/\S+\s*/g);
-
-  if (!tokens || tokens.length === 0) {
-    return normalized ? [normalized] : [];
-  }
-
-  const wordCount = tokens.length;
-  const burstSize = wordCount > 220 ? 10 : wordCount > 120 ? 7 : wordCount > 60 ? 5 : 3;
-
-  const chunks: string[] = [];
-  let currentChunk = '';
-  let wordsInChunk = 0;
-
-  for (const token of tokens) {
-    currentChunk += token;
-    if (/\S/.test(token.trim())) {
-      wordsInChunk += 1;
-    }
-
-    if (wordsInChunk >= burstSize || /[.!?]\s*$/.test(currentChunk) || /\n\s*$/.test(currentChunk)) {
-      chunks.push(currentChunk);
-      currentChunk = '';
-      wordsInChunk = 0;
-    }
-  }
-
-  if (currentChunk) {
-    chunks.push(currentChunk);
-  }
-
-  return chunks;
-}
-
-function getChunkDelay(totalWordCount: number, chunkSize: number): number {
-  const baseDelay = totalWordCount > 220 ? 16 : totalWordCount > 120 ? 20 : totalWordCount > 60 ? 26 : 34;
-  return Math.min(85, baseDelay + Math.max(0, chunkSize - 1) * 4);
-}
 
 export function useQuery() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -98,67 +58,55 @@ export function useQuery() {
         content: m.content,
       }));
 
-      const result = await askQuestion({
-        ...payload,
-        conversationId: conversationId ?? undefined,
-        history: historyPayload,
-      });
+      let renderedAnswer = '';
 
-      if (activeRequestIdRef.current !== requestId || !mountedRef.current) {
-        return;
-      }
-
-      const chunks = splitAnswerIntoChunks(result.answer);
-      const totalWordCount = chunks.reduce(
-        (count, chunk) => count + chunk.trim().split(/\s+/).filter(Boolean).length,
-        0,
-      );
-
-      if (chunks.length === 0) {
-        updateAssistantMessage(assistantMessageId, (message) => ({
-          ...message,
-          content: result.answer,
-          sources: result.sources,
-          model: result.model,
-          isStreaming: false,
-        }));
-      } else {
-        let renderedAnswer = '';
-
-        for (const chunk of chunks) {
+      await askQuestionStream(
+        {
+          ...payload,
+          conversationId: conversationId ?? undefined,
+          history: historyPayload,
+        },
+        (token) => {
+          // Handle incoming token in real-time
           if (activeRequestIdRef.current !== requestId || !mountedRef.current) {
             return;
           }
 
-          renderedAnswer += chunk;
+          renderedAnswer += token;
           updateAssistantMessage(assistantMessageId, (message) => ({
             ...message,
             content: renderedAnswer,
-            sources: result.sources,
-            model: result.model,
             isStreaming: true,
           }));
-
-          if (renderedAnswer.length < result.answer.length) {
-            const delay = getChunkDelay(totalWordCount, chunk.trim().split(/\s+/).filter(Boolean).length);
-            await new Promise<void>((resolve) => {
-              window.setTimeout(resolve, delay);
-            });
+        },
+        (completeData) => {
+          // Handle stream completion with metadata
+          if (activeRequestIdRef.current !== requestId || !mountedRef.current) {
+            return;
           }
-        }
 
-        updateAssistantMessage(assistantMessageId, (message) => ({
-          ...message,
-          content: result.answer,
-          sources: result.sources,
-          model: result.model,
-          isStreaming: false,
-        }));
-      }
+          updateAssistantMessage(assistantMessageId, (message) => ({
+            ...message,
+            content: renderedAnswer,
+            sources: completeData.sources,
+            model: completeData.model,
+            isStreaming: false,
+          }));
 
-      if (result.conversationId && activeRequestIdRef.current === requestId) {
-        setConversationId(result.conversationId);
-      }
+          if (completeData.conversationId && activeRequestIdRef.current === requestId) {
+            setConversationId(completeData.conversationId);
+          }
+        },
+        (error) => {
+          // Handle stream error
+          if (activeRequestIdRef.current !== requestId || !mountedRef.current) {
+            return;
+          }
+          console.error('Stream error:', error);
+          setError(error.message);
+          setMessages((previous) => previous.filter((message) => message.id !== assistantMessageId));
+        },
+      );
     } catch (err) {
       setMessages((previous) => previous.filter((message) => message.id !== assistantMessageId));
       const message = err instanceof Error ? err.message : 'Query failed';

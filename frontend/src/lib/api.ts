@@ -250,6 +250,103 @@ export async function askQuestion(payload: {
   return parseAuthJson<QueryResponse>(response);
 }
 
+export async function askQuestionStream(
+  payload: {
+    question: string;
+    conversationId?: string;
+    history?: Array<{ role: 'user' | 'assistant'; content: string }>;
+    documentIds?: string[];
+    topK?: number;
+  },
+  onToken: (token: string) => void,
+  onComplete: (data: { sources: unknown; model: string; conversationId: string }) => void,
+  onError: (error: Error) => void,
+): Promise<void> {
+  const response = await fetch(`${API_BASE}/api/query/stream`, {
+    method: 'POST',
+    headers: buildAuthHeaders({
+      'Content-Type': 'application/json',
+    }),
+    body: JSON.stringify(payload),
+  });
+
+  if (response.status === 401) {
+    clearAuth({ notifySessionExpired: true });
+    throw new Error('Session expired. Please sign in again.');
+  }
+
+  if (!response.ok) {
+    throw new Error(await extractErrorMessage(response));
+  }
+
+  if (!response.body) {
+    throw new Error('Response body is empty');
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+
+      // Keep the last incomplete line in the buffer
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const jsonStr = line.slice(6); // Remove 'data: ' prefix
+            const data = JSON.parse(jsonStr);
+
+            if (data.done) {
+              onComplete({
+                sources: data.sources,
+                model: data.model,
+                conversationId: data.conversationId,
+              });
+            } else if (data.token) {
+              onToken(data.token);
+            }
+          } catch (err) {
+            console.error('Failed to parse SSE event:', err);
+          }
+        }
+      }
+    }
+
+    // Process any remaining buffer
+    if (buffer.startsWith('data: ')) {
+      try {
+        const jsonStr = buffer.slice(6);
+        const data = JSON.parse(jsonStr);
+        if (data.done) {
+          onComplete({
+            sources: data.sources,
+            model: data.model,
+            conversationId: data.conversationId,
+          });
+        } else if (data.token) {
+          onToken(data.token);
+        }
+      } catch (err) {
+        console.error('Failed to parse final SSE event:', err);
+      }
+    }
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error('Unknown error during streaming');
+    onError(error);
+    throw error;
+  } finally {
+    reader.releaseLock();
+  }
+}
+
 export async function fetchQueryLogs(): Promise<unknown> {
   const response = await requestWithAuth(`${API_BASE}/api/query/history`, {
     headers: buildAuthHeaders(),
