@@ -1,3 +1,6 @@
+/**
+ * Repository for document persistence. Executes SQL operations and maps rows to domain records.
+ */
 import { query } from '../config/db.js';
 import type { DocumentRecord, DocumentStatus } from '../types/index.js';
 
@@ -49,7 +52,17 @@ function mapDocument(row: DbDocumentRow): DocumentRecord {
   };
 }
 
+/**
+ * Repository layer for managing Document records.
+ * Provides database abstraction for creating, retrieving, updating, and deleting document metadata.
+ */
 export class DocumentRepository {
+  /**
+   * Creates a new document record in the database with an initial 'processing' status.
+   *
+   * @param input - Metadata about the uploaded document
+   * @returns The created DocumentRecord
+   */
   async create(input: CreateDocumentInput): Promise<DocumentRecord> {
     const result = await query<DbDocumentRow>(
       `
@@ -71,6 +84,13 @@ export class DocumentRepository {
     return mapDocument(result.rows[0]);
   }
 
+  /**
+   * Finds a specific document by ID, ensuring it belongs to the given user.
+   *
+   * @param id - The document ID
+   * @param userId - The ID of the user requesting the document
+   * @returns The DocumentRecord if found and authorized, null otherwise
+   */
   async findById(id: string, userId: string): Promise<DocumentRecord | null> {
     const result = await query<DbDocumentRow>(`SELECT * FROM documents WHERE id = $1 AND user_id = $2`, [id, userId]);
     if (result.rowCount === 0) {
@@ -80,6 +100,13 @@ export class DocumentRepository {
     return mapDocument(result.rows[0]);
   }
 
+  /**
+   * Finds a specific document by ID across the entire system (admin/background job use).
+   * Does NOT enforce user isolation.
+   *
+   * @param id - The document ID
+   * @returns The DocumentRecord if found, null otherwise
+   */
   async findByIdAny(id: string): Promise<DocumentRecord | null> {
     const result = await query<DbDocumentRow>(`SELECT * FROM documents WHERE id = $1`, [id]);
     if (result.rowCount === 0) {
@@ -88,6 +115,12 @@ export class DocumentRepository {
     return mapDocument(result.rows[0]);
   }
 
+  /**
+   * Retrieves a paginated list of documents for a specific user, optionally filtered by status.
+   *
+   * @param options - Pagination and filtering options
+   * @returns An object containing the list of documents and the total count
+   */
   async list(options: ListDocumentOptions): Promise<{ data: DocumentRecord[]; total: number }> {
     const offset = (options.page - 1) * options.limit;
 
@@ -123,6 +156,13 @@ export class DocumentRepository {
     };
   }
 
+  /**
+   * Updates the processing status and associated metadata of a document.
+   *
+   * @param id - The document ID
+   * @param status - The new status (e.g., 'ready', 'failed')
+   * @param options - Optional error messages or chunk counts to update
+   */
   async updateStatus(
     id: string,
     status: DocumentStatus,
@@ -141,6 +181,13 @@ export class DocumentRepository {
     );
   }
 
+  /**
+   * Deletes a document record from the database, validating user ownership.
+   *
+   * @param id - The document ID
+   * @param userId - The ID of the user requesting deletion
+   * @returns True if deletion occurred, false if not found or unauthorized
+   */
   async deleteById(id: string, userId: string): Promise<boolean> {
     const result = await query(`DELETE FROM documents WHERE id = $1 AND user_id = $2`, [id, userId]);
     return (result.rowCount ?? 0) > 0;

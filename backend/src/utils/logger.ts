@@ -1,3 +1,6 @@
+/**
+ * Utility module for logger. Provides reusable helper functions across backend features.
+ */
 type Level = 'info' | 'warn' | 'error';
 
 function log(level: Level, message: string, meta?: unknown): void {

@@ -1,9 +1,20 @@
+/**
+ * HTTP controller for conversation endpoints. Validates request payloads and orchestrates backend services.
+ */
 import { ConversationRepository } from '../repositories/conversation.repository.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
+/**
+ * Controller handling user conversations.
+ * Responsible for listing conversations, retrieving messages within a conversation, and deleting conversations.
+ */
 export class ConversationController {
   constructor(private readonly conversationRepository = new ConversationRepository()) {}
 
+  /**
+   * Retrieves a list of all conversations for the authenticated user.
+   * Requires a valid user session.
+   */
   list = asyncHandler(async (req, res) => {
     const userId = req.auth?.userId;
     if (!userId) {
@@ -15,6 +26,10 @@ export class ConversationController {
     res.json(conversations);
   });
 
+  /**
+   * Retrieves all messages for a specific conversation.
+   * Validates user authorization and ensures the conversation belongs to the user before returning the messages.
+   */
   listMessages = asyncHandler(async (req, res) => {
     const userId = req.auth?.userId;
     if (!userId) {
@@ -41,6 +56,10 @@ export class ConversationController {
     });
   });
 
+  /**
+   * Deletes a specific conversation by ID.
+   * Ensures that the conversation belongs to the authenticated user before deletion.
+   */
   delete = asyncHandler(async (req, res) => {
     const userId = req.auth?.userId;
     if (!userId) {

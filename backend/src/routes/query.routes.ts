@@ -1,3 +1,6 @@
+/**
+ * Route module for query endpoints. Binds HTTP paths to controllers and required middleware.
+ */
 import { Router } from 'express';
 import { QueryController } from '../controllers/query.controller.js';
 

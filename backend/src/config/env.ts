@@ -1,3 +1,6 @@
+/**
+ * Configuration module for env. Centralizes environment and infrastructure setup.
+ */
 import { config } from 'dotenv';
 import { z } from 'zod';
 

@@ -1,3 +1,6 @@
+/**
+ * Utility module for async handler. Provides reusable helper functions across backend features.
+ */
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 
 export function asyncHandler(

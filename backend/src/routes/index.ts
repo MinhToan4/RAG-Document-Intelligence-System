@@ -1,3 +1,6 @@
+/**
+ * Route module for index endpoints. Binds HTTP paths to controllers and required middleware.
+ */
 import { Router } from 'express';
 import { authMiddleware } from '../middlewares/auth.middleware.js';
 import { authRouter } from './auth.routes.js';

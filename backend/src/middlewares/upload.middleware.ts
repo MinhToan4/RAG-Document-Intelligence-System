@@ -1,3 +1,6 @@
+/**
+ * Express middleware for upload concerns in the API request/response pipeline.
+ */
 import multer from 'multer';
 import path from 'node:path';
 import fs from 'node:fs';

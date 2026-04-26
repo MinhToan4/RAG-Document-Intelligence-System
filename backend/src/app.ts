@@ -1,3 +1,6 @@
+/**
+ * Express application factory that configures global middleware and API route wiring.
+ */
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';

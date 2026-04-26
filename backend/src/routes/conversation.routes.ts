@@ -1,3 +1,6 @@
+/**
+ * Route module for conversation endpoints. Binds HTTP paths to controllers and required middleware.
+ */
 import { Router } from 'express';
 import { ConversationController } from '../controllers/conversation.controller.js';
 

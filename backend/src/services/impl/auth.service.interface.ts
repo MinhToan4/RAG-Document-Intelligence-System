@@ -1,3 +1,6 @@
+/**
+ * Service contract for auth operations. Defines behavior required by higher-level modules.
+ */
 import type { AuthUserDto } from '../../dtos/auth.dto.js';
 
 export type AuthResult = {

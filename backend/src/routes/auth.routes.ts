@@ -1,3 +1,6 @@
+/**
+ * Route module for auth endpoints. Binds HTTP paths to controllers and required middleware.
+ */
 import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller.js';
 

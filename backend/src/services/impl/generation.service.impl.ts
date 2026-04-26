@@ -1,3 +1,6 @@
+/**
+ * Service implementation for generation operations. Encapsulates domain workflows and provider/repository integration.
+ */
 import { env } from '../../config/env.js';
 import type { ChunkSearchResult } from '../../types/index.js';
 import {
@@ -158,9 +161,25 @@ function apiKeysForProvider(provider: Provider): string[] {
   return env.GROQ_API_KEY ? [env.GROQ_API_KEY] : [];
 }
 
+/**
+ * Implementation of the Generation Service.
+ * Interacts with LLM providers (e.g., Gemini, Groq) to generate answers based on user questions
+ * and retrieved document chunks. Implements fallback logic across different models and providers.
+ */
 export class GenerationServiceImpl implements IGenerationService {
   private warnedMockMode = false;
 
+  /**
+   * Generates an answer to a user's question using the retrieved context chunks.
+   * This method builds the prompt, iterates through configured LLM providers/models,
+   * handles transient errors/retries, and returns the generated text.
+   *
+   * @param question - The user's input question
+   * @param chunks - An array of relevant text chunks retrieved from documents
+   * @param history - Optional conversation history to provide conversational context
+   * @param language - Optional language override for the generated response
+   * @returns An object containing the generated answer string and the model used
+   */
   async generateAnswer(
     question: string,
     chunks: ChunkSearchResult[],
@@ -260,6 +279,16 @@ export class GenerationServiceImpl implements IGenerationService {
     };
   }
 
+  /**
+   * Private helper to invoke the Google Gemini API for generation.
+   *
+   * @param prompt - The grounded prompt containing the context and instructions
+   * @param apiKey - The API key for Gemini
+   * @param model - The specific Gemini model to use (e.g., gemini-1.5-flash)
+   * @param history - Previous messages in the conversation
+   * @param fallbackAnswer - A default string to return if generation yields an empty result
+   * @returns The generated text response
+   */
   private async generateWithGemini(
     prompt: string,
     apiKey: string,
@@ -300,6 +329,16 @@ export class GenerationServiceImpl implements IGenerationService {
     return text.trim() || fallbackAnswer || 'No relevant information was found in the provided documents.';
   }
 
+  /**
+   * Private helper to invoke the Groq API (OpenAI compatible) for generation.
+   *
+   * @param prompt - The grounded prompt containing the context and instructions
+   * @param apiKey - The API key for Groq
+   * @param model - The specific Groq model to use (e.g., llama3-8b-8192)
+   * @param history - Previous messages in the conversation
+   * @param fallbackAnswer - A default string to return if generation yields an empty result
+   * @returns The generated text response
+   */
   private async generateWithGroq(
     prompt: string,
     apiKey: string,

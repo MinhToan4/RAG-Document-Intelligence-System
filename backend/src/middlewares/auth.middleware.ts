@@ -1,3 +1,6 @@
+/**
+ * Express middleware for auth concerns in the API request/response pipeline.
+ */
 import type { RequestHandler } from 'express';
 import { verifyTokenType } from '../utils/jwt.js';
 

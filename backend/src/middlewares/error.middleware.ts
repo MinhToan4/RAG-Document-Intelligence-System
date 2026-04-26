@@ -1,3 +1,6 @@
+/**
+ * Express middleware for error concerns in the API request/response pipeline.
+ */
 import type { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { AppError } from '../utils/app-error.js';

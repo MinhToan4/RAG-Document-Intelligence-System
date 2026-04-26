@@ -1,3 +1,6 @@
+/**
+ * Service contract for generation operations. Defines behavior required by higher-level modules.
+ */
 import type { ChunkSearchResult } from '../../types/index.js';
 import type { SupportedQuestionLanguage } from '../../utils/language.js';
 

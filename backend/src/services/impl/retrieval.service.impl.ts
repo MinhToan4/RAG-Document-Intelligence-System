@@ -1,3 +1,6 @@
+/**
+ * Service implementation for retrieval operations. Encapsulates domain workflows and provider/repository integration.
+ */
 import { env } from '../../config/env.js';
 import { ChunkRepository } from '../../repositories/chunk.repository.js';
 import { DocumentRepository } from '../../repositories/document.repository.js';
@@ -15,6 +18,11 @@ import { GenerationServiceImpl } from './generation.service.impl.js';
 import type { IGenerationService } from './generation.service.interface.js';
 import type { AskInput, IRetrievalService } from './retrieval.service.interface.js';
 
+/**
+ * Implementation of the Retrieval Service.
+ * Coordinates the RAG workflow by taking a user query, generating an embedding,
+ * searching the vector database for relevant chunks, and passing them to the generation service.
+ */
 export class RetrievalServiceImpl implements IRetrievalService {
   constructor(
     private readonly embeddingService: IEmbeddingService = new EmbeddingServiceImpl(),
@@ -24,6 +32,14 @@ export class RetrievalServiceImpl implements IRetrievalService {
     private readonly queryLogRepository = new QueryLogRepository(),
   ) { }
 
+  /**
+   * Executes a retrieval-augmented generation (RAG) query.
+   * Handles special intents (like listing documents), embeds the query, retrieves relevant context chunks,
+   * generates an answer using an LLM, and logs the query details.
+   *
+   * @param input - The query parameters including user question, topK, and history
+   * @returns A QueryResponse containing the generated answer, source chunks, and the model used
+   */
   async ask(input: AskInput): Promise<QueryResponse> {
     const startMs = Date.now();
     const topK = input.topK ?? env.TOP_K_DEFAULT;

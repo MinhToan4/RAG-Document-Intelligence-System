@@ -1,3 +1,6 @@
+/**
+ * Configuration module for db. Centralizes environment and infrastructure setup.
+ */
 import { Pool, type QueryResult, type QueryResultRow } from 'pg';
 import { env } from './env.js';
 import { buildPgPoolConfig } from './pg-options.js';

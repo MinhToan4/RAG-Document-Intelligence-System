@@ -1,3 +1,6 @@
+/**
+ * Repository for user persistence. Executes SQL operations and maps rows to domain records.
+ */
 import { query } from '../config/db.js';
 import type { UserRecord, UserRole } from '../types/index.js';
 
@@ -35,7 +38,17 @@ function mapUser(row: DbUserRow): UserRecord {
   };
 }
 
+/**
+ * Repository layer for managing User records in the PostgreSQL database.
+ * Handles user creation, retrieval by unique fields (username, email), and profile updates.
+ */
 export class UserRepository {
+  /**
+   * Creates a new user record in the database.
+   *
+   * @param input - The payload containing user details (username, email, hashed password, etc.)
+   * @returns The newly created UserRecord mapped to the domain model
+   */
   async create(input: CreateUserInput): Promise<UserRecord> {
     const result = await query<DbUserRow>(
       `
@@ -48,6 +61,12 @@ export class UserRepository {
     return mapUser(result.rows[0]);
   }
 
+  /**
+   * Finds a user by their unique username.
+   *
+   * @param username - The username to search for
+   * @returns The UserRecord if found, null otherwise
+   */
   async findByUsername(username: string): Promise<UserRecord | null> {
     const result = await query<DbUserRow>(
       `
@@ -64,6 +83,12 @@ export class UserRepository {
     return mapUser(result.rows[0]);
   }
 
+  /**
+   * Finds a user by their unique email address.
+   *
+   * @param email - The email to search for
+   * @returns The UserRecord if found, null otherwise
+   */
   async findByEmail(email: string): Promise<UserRecord | null> {
     const result = await query<DbUserRow>(
       `
@@ -80,6 +105,14 @@ export class UserRepository {
     return mapUser(result.rows[0]);
   }
 
+  /**
+   * Finds a user matching either a username or an email.
+   * Useful for registration validation to ensure uniqueness.
+   *
+   * @param username - The username to check
+   * @param email - The email to check
+   * @returns The UserRecord if a match is found, null otherwise
+   */
   async findByUsernameOrEmail(username: string, email: string): Promise<UserRecord | null> {
     const result = await query<DbUserRow>(
       `
@@ -96,6 +129,12 @@ export class UserRepository {
     return mapUser(result.rows[0]);
   }
 
+  /**
+   * Finds a user by their primary ID.
+   *
+   * @param userId - The UUID of the user
+   * @returns The UserRecord if found, null otherwise
+   */
   async findById(userId: string): Promise<UserRecord | null> {
     const result = await query<DbUserRow>(
       `
@@ -112,6 +151,15 @@ export class UserRepository {
     return mapUser(result.rows[0]);
   }
 
+  /**
+   * Updates a user's profile information (full name) and optionally their password.
+   * Automatically updates the `updated_at` timestamp.
+   *
+   * @param userId - The UUID of the user to update
+   * @param fullName - The new full name
+   * @param passwordHash - Optional new hashed password
+   * @returns The updated UserRecord, or null if the user was not found
+   */
   async updateProfile(userId: string, fullName: string, passwordHash?: string): Promise<UserRecord | null> {
     const result = await query<DbUserRow>(
       `

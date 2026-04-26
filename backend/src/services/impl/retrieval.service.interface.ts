@@ -1,3 +1,6 @@
+/**
+ * Service contract for retrieval operations. Defines behavior required by higher-level modules.
+ */
 import type { QueryResponse } from '../../types/index.js';
 
 export type AskInput = {

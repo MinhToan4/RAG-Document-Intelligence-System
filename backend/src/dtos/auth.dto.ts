@@ -1,3 +1,6 @@
+/**
+ * DTO and validation schema module for auth payloads.
+ */
 import { z } from 'zod';
 import type { UserRecord } from '../types/index.js';
 

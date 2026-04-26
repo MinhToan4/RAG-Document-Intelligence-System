@@ -1,3 +1,6 @@
+/**
+ * Route module for document endpoints. Binds HTTP paths to controllers and required middleware.
+ */
 import { Router } from 'express';
 import { DocumentController } from '../controllers/document.controller.js';
 import { upload } from '../middlewares/upload.middleware.js';

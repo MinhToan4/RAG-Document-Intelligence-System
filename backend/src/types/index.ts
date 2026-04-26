@@ -1,3 +1,6 @@
+/**
+ * Shared backend type declarations used across modules.
+ */
 export type DocumentStatus = 'processing' | 'ready' | 'failed';
 export type UserRole = 'ROLE_USER' | 'ROLE_ADMIN';
 

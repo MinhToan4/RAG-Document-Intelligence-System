@@ -1,3 +1,6 @@
+/**
+ * DTO and validation schema module for query payloads.
+ */
 import { z } from 'zod';
 
 export const askQueryRequestSchema = z.object({

@@ -1,3 +1,6 @@
+/**
+ * HTTP controller for document endpoints. Validates request payloads and orchestrates backend services.
+ */
 import {
   listDocumentsQuerySchema,
   toDocumentSummaryDto,
@@ -8,9 +11,17 @@ import { IngestionServiceImpl } from '../services/impl/ingestion.service.impl.js
 import type { IIngestionService } from '../services/impl/ingestion.service.interface.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
+/**
+ * Controller handling document ingestion, retrieval, and management.
+ * Provides endpoints to upload files, list processed documents, get document details, and manage document chunks.
+ */
 export class DocumentController {
   constructor(private readonly ingestionService: IIngestionService = new IngestionServiceImpl()) {}
 
+  /**
+   * Handles uploading and ingesting a new document.
+   * Requires a file upload and associated metadata. It parses, chunks, and stores the document vectors.
+   */
   upload = asyncHandler(async (req, res) => {
     if (!req.file) {
       res.status(400).json({ message: 'file is required' });
@@ -30,6 +41,9 @@ export class DocumentController {
     res.status(201).json(toUploadDocumentResponseDto(created));
   });
 
+  /**
+   * Retrieves a paginated list of documents uploaded by the authenticated user.
+   */
   list = asyncHandler(async (req, res) => {
     const parsed = listDocumentsQuerySchema.parse(req.query);
     const userId = req.auth?.userId;
@@ -48,6 +62,10 @@ export class DocumentController {
     });
   });
 
+  /**
+   * Fetches detailed information for a specific document by its ID.
+   * Validates user ownership of the document.
+   */
   detail = asyncHandler(async (req, res) => {
     const id = req.params.id;
     const userId = req.auth?.userId;
@@ -66,6 +84,10 @@ export class DocumentController {
     res.json(document);
   });
 
+  /**
+   * Deletes a specific document and its associated chunks from the system.
+   * Checks for ownership before performing the deletion.
+   */
   remove = asyncHandler(async (req, res) => {
     const userId = req.auth?.userId;
     if (!userId) {
@@ -82,6 +104,10 @@ export class DocumentController {
     res.status(204).send();
   });
 
+  /**
+   * Retrieves all processed chunks and their embeddings for a given document.
+   * This is useful for analyzing how the document was split during ingestion.
+   */
   chunks = asyncHandler(async (req, res) => {
     const userId = req.auth?.userId;
     if (!userId) {
@@ -103,6 +129,10 @@ export class DocumentController {
     });
   });
 
+  /**
+   * Triggers a reprocessing of an existing document.
+   * This can be used if the chunking strategy or embedding model changes, and the document needs to be re-analyzed.
+   */
   reprocess = asyncHandler(async (req, res) => {
     const userId = req.auth?.userId;
     if (!userId) {

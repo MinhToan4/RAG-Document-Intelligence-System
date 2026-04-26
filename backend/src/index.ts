@@ -1,3 +1,6 @@
+/**
+ * Backend process entry point that boots the HTTP server and startup lifecycle.
+ */
 import fs from 'node:fs';
 import path from 'node:path';
 import { createApp } from './app.js';

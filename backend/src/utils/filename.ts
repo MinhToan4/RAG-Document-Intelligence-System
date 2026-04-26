@@ -1,3 +1,6 @@
+/**
+ * Utility module for filename. Provides reusable helper functions across backend features.
+ */
 function looksLikeMojibake(value: string): boolean {
   return /Ã.|Â.|á»|áº|Æ|Ð|�/.test(value);
 }

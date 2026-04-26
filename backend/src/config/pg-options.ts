@@ -1,3 +1,6 @@
+/**
+ * Configuration module for pg options. Centralizes environment and infrastructure setup.
+ */
 import type { PoolConfig } from 'pg';
 
 type DbSslConfigInput = {

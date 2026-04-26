@@ -1,3 +1,6 @@
+/**
+ * Service composition module exporting backend service contracts and implementations.
+ */
 export { EmbeddingServiceImpl } from './impl/embedding.service.impl.js';
 export type { IEmbeddingService } from './impl/embedding.service.interface.js';
 

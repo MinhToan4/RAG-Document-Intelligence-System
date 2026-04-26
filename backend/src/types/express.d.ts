@@ -1,3 +1,6 @@
+/**
+ * Shared backend type declarations used across modules.
+ */
 export {};
 
 declare global {

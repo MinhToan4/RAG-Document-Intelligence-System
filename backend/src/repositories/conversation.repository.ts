@@ -1,3 +1,6 @@
+/**
+ * Repository for conversation persistence. Executes SQL operations and maps rows to domain records.
+ */
 import { query } from '../config/db.js';
 import type { ConversationMessageRecord, ConversationRecord } from '../types/index.js';
 
@@ -55,7 +58,18 @@ function mapMessage(row: DbConversationMessageRow): ConversationMessageRecord {
   };
 }
 
+/**
+ * Repository layer for managing Chat Conversations and Messages.
+ * Provides abstraction for inserting and fetching conversation histories from PostgreSQL.
+ */
 export class ConversationRepository {
+  /**
+   * Creates a new conversation thread for a given user.
+   *
+   * @param userId - The UUID of the user creating the conversation
+   * @param title - The auto-generated or user-provided title of the conversation
+   * @returns The newly created ConversationRecord
+   */
   async create(userId: string, title: string): Promise<ConversationRecord> {
     const result = await query<DbConversationRow>(
       `
@@ -75,6 +89,14 @@ export class ConversationRepository {
     return mapConversation(result.rows[0]);
   }
 
+  /**
+   * Retrieves a specific conversation by ID, verifying that it belongs to the specified user.
+   * Joins with the messages table to calculate the last message timestamp and message count.
+   *
+   * @param conversationId - The UUID of the conversation
+   * @param userId - The UUID of the user (for authorization)
+   * @returns The ConversationRecord if found, null otherwise
+   */
   async findByIdForUser(conversationId: string, userId: string): Promise<ConversationRecord | null> {
     const result = await query<DbConversationRow>(
       `
@@ -96,6 +118,12 @@ export class ConversationRepository {
     return mapConversation(result.rows[0]);
   }
 
+  /**
+   * Lists all conversations belonging to a user, ordered by the most recent activity.
+   *
+   * @param userId - The UUID of the user
+   * @returns An array of ConversationRecords
+   */
   async listByUser(userId: string): Promise<ConversationRecord[]> {
     const result = await query<DbConversationRow>(
       `
@@ -114,6 +142,12 @@ export class ConversationRepository {
     return result.rows.map(mapConversation);
   }
 
+  /**
+   * Appends a new message (either from the user or the assistant) to a conversation.
+   * Automatically updates the conversation's `updated_at` timestamp.
+   *
+   * @param input - The payload containing the message details (role, content, context sources, etc.)
+   */
   async addMessage(input: {
     conversationId: string;
     role: 'user' | 'assistant';
@@ -145,6 +179,14 @@ export class ConversationRepository {
     );
   }
 
+  /**
+   * Retrieves the full chronological message history of a specific conversation.
+   * Ensures the conversation belongs to the requesting user before returning data.
+   *
+   * @param conversationId - The UUID of the conversation
+   * @param userId - The UUID of the requesting user
+   * @returns An array of ConversationMessageRecords representing the chat history
+   */
   async listMessages(conversationId: string, userId: string): Promise<ConversationMessageRecord[]> {
     const result = await query<DbConversationMessageRow>(
       `
@@ -167,6 +209,13 @@ export class ConversationRepository {
     return result.rows.map(mapMessage);
   }
 
+  /**
+   * Deletes a conversation and cascaded messages from the database.
+   *
+   * @param conversationId - The UUID of the conversation to delete
+   * @param userId - The UUID of the requesting user (for authorization)
+   * @returns True if deletion occurred, false otherwise
+   */
   async deleteById(conversationId: string, userId: string): Promise<boolean> {
     const result = await query(
       `

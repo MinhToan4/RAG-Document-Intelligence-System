@@ -1,3 +1,6 @@
+/**
+ * Service implementation for embedding operations. Encapsulates domain workflows and provider/repository integration.
+ */
 import { env } from '../../config/env.js';
 import { logger } from '../../utils/logger.js';
 import type { IEmbeddingService } from './embedding.service.interface.js';
@@ -65,15 +68,33 @@ type GeminiEmbeddingResponse = {
   };
 };
 
+/**
+ * Implementation of the Embedding Service.
+ * Interfaces with AI providers (e.g., Gemini) to convert text into vector embeddings.
+ * Includes a fallback mock mode for development without an API key.
+ */
 export class EmbeddingServiceImpl implements IEmbeddingService {
   private readonly dimension = env.EMBEDDING_DIM;
   private warnedMockMode = false;
 
+  /**
+   * Converts a single text string into a vector embedding.
+   *
+   * @param text - The text to embed
+   * @returns A promise that resolves to an array of numbers representing the vector
+   */
   async embedText(text: string): Promise<number[]> {
     const items = await this.embedTexts([text]);
     return items[0];
   }
 
+  /**
+   * Converts an array of text strings into an array of vector embeddings.
+   * Handles API rate limiting and provides a mock implementation if the API key is missing.
+   *
+   * @param texts - An array of strings to embed
+   * @returns A promise that resolves to a 2D array of numbers (array of vectors)
+   */
   async embedTexts(texts: string[]): Promise<number[][]> {
     if (texts.length === 0) {
       return [];
@@ -93,6 +114,13 @@ export class EmbeddingServiceImpl implements IEmbeddingService {
     return Promise.all(texts.map((text) => this.embedGemini(text, apiKey)));
   }
 
+  /**
+   * Private helper to invoke the Google Gemini Embedding API.
+   *
+   * @param text - The text to embed
+   * @param apiKey - The Gemini API key
+   * @returns A promise that resolves to the embedding vector
+   */
   private async embedGemini(text: string, apiKey: string): Promise<number[]> {
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${env.EMBEDDING_MODEL}:embedContent?key=${apiKey}`;
 

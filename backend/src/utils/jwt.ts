@@ -1,3 +1,6 @@
+/**
+ * Utility module for jwt. Provides reusable helper functions across backend features.
+ */
 import jwt, { type JwtPayload, type SignOptions } from 'jsonwebtoken';
 import { env } from '../config/env.js';
 import type { AuthClaims, JwtTokenType, UserRecord } from '../types/index.js';

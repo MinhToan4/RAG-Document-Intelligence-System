@@ -1,3 +1,6 @@
+/**
+ * Utility module for language. Provides reusable helper functions across backend features.
+ */
 export type SupportedQuestionLanguage = 'vi' | 'en';
 
 const VIETNAMESE_CHAR_REGEX =

@@ -1,3 +1,6 @@
+/**
+ * DTO and validation schema module for document payloads.
+ */
 import { z } from 'zod';
 import type { DocumentRecord } from '../types/index.js';
 

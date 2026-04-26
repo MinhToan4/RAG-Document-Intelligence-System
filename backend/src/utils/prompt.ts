@@ -1,3 +1,6 @@
+/**
+ * Utility module for prompt. Provides reusable helper functions across backend features.
+ */
 import type { ChunkSearchResult } from '../types/index.js';
 import {
   fallbackAnswerForLanguage,

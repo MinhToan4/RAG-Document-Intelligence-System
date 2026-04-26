@@ -1,3 +1,6 @@
+/**
+ * Repository for chunk persistence. Executes SQL operations and maps rows to domain records.
+ */
 import { query } from '../config/db.js';
 import type { ChunkInsertInput, ChunkSearchResult } from '../types/index.js';
 
@@ -23,7 +26,19 @@ function toSqlVector(values: number[]): string {
   return `[${values.join(',')}]`;
 }
 
+/**
+ * Repository layer for managing document chunks in the database.
+ * Handles the storage, deletion, and semantic search of vector embeddings using pgvector.
+ */
 export class ChunkRepository {
+  /**
+   * Bulk inserts document chunks and their corresponding vector embeddings into the database.
+   * Handles conflicts by updating existing chunks if they already exist for a given document and index.
+   *
+   * @param documentId - The ID of the document these chunks belong to
+   * @param chunks - An array of chunk data (content, token count, page number)
+   * @param embeddings - An array of vector embeddings corresponding to the chunks
+   */
   async insertChunks(
     documentId: string,
     chunks: ChunkInsertInput[],
@@ -74,10 +89,22 @@ export class ChunkRepository {
     );
   }
 
+  /**
+   * Deletes all chunks associated with a specific document.
+   * Useful when a document is deleted or needs to be reprocessed.
+   *
+   * @param documentId - The ID of the document to clear chunks for
+   */
   async deleteByDocumentId(documentId: string): Promise<void> {
     await query(`DELETE FROM document_chunks WHERE document_id = $1`, [documentId]);
   }
 
+  /**
+   * Retrieves all chunks for a specific document, ordered sequentially by their index.
+   *
+   * @param documentId - The ID of the document
+   * @returns A list of chunks without their vector embeddings
+   */
   async listByDocumentId(documentId: string): Promise<DbChunkRow[]> {
     const result = await query<DbChunkRow>(
       `
@@ -91,6 +118,18 @@ export class ChunkRepository {
     return result.rows;
   }
 
+  /**
+   * Performs a hybrid search (semantic + keyword) to find chunks most relevant to a query.
+   * Uses vector cosine distance for semantic similarity and full-text search (ts_rank) for keyword matching.
+   * Results are combined using a weighted score.
+   *
+   * @param queryEmbedding - The vector embedding of the user's query
+   * @param queryText - The raw text of the user's query (for full-text search)
+   * @param topK - The number of top results to return
+   * @param userId - The ID of the user (to enforce data isolation)
+   * @param documentIds - Optional list of specific document IDs to filter the search
+   * @returns An array of the most relevant ChunkSearchResults
+   */
   async searchSimilar(
     queryEmbedding: number[],
     queryText: string,

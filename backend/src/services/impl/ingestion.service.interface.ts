@@ -1,3 +1,6 @@
+/**
+ * Service contract for ingestion operations. Defines behavior required by higher-level modules.
+ */
 import type { DocumentRecord, DocumentStatus } from '../../types/index.js';
 
 export type ListDocumentsInput = {

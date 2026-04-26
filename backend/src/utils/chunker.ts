@@ -1,3 +1,6 @@
+/**
+ * Utility module for chunker. Provides reusable helper functions across backend features.
+ */
 import { get_encoding, type Tiktoken } from 'tiktoken';
 
 type TextChunk = {
@@ -152,6 +155,16 @@ function splitHardByTokens(text: string, maxTokens: number): string[] {
   return output;
 }
 
+/**
+ * Core text chunking utility for RAG ingestion.
+ * Splits large documents into smaller, semantically coherent chunks based on token count,
+ * while maintaining a specified overlap between consecutive chunks to preserve context.
+ *
+ * @param text - The raw text of the document to be chunked
+ * @param chunkSizeTokens - The target maximum number of tokens per chunk
+ * @param overlapTokens - The number of tokens to overlap between adjacent chunks
+ * @returns An array of TextChunk objects containing the split content and exact token count
+ */
 export function chunkText(text: string, chunkSizeTokens: number, overlapTokens: number): TextChunk[] {
   const normalized = normalizeText(text);
   if (!normalized) {
