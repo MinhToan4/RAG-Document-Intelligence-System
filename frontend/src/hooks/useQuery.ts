@@ -1,7 +1,17 @@
+/**
+ * Custom React hook for query execution. Manages feature state, side effects, and API interactions.
+ */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { askQuestion, askQuestionStream } from '../lib/api';
 import type { ChatMessage } from '../types';
 
+/**
+ * Custom React hook for managing RAG queries and chat conversations.
+ * Handles maintaining conversation state, sending questions to the API via streaming,
+ * and updating the chat UI progressively as the answer is generated.
+ *
+ * @returns State and methods to interact with the query system.
+ */
 export function useQuery() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -18,6 +28,12 @@ export function useQuery() {
     };
   }, []);
 
+  /**
+   * Utility to update a specific assistant message in the conversation history.
+   *
+   * @param messageId - The ID of the message to update
+   * @param updater - A callback function that modifies the current message state
+   */
   const updateAssistantMessage = useCallback(
     (messageId: string, updater: (message: ChatMessage) => ChatMessage) => {
       setMessages((previous) =>
@@ -27,6 +43,12 @@ export function useQuery() {
     [],
   );
 
+  /**
+   * Submits a new question to the backend and handles the streamed response.
+   * Updates the local message history progressively as new tokens arrive.
+   *
+   * @param payload - The query parameters containing the question, optional specific documents, and topK chunks
+   */
   const submit = async (payload: { question: string; documentIds?: string[]; topK?: number }) => {
     const requestId = activeRequestIdRef.current + 1;
     activeRequestIdRef.current = requestId;
@@ -118,6 +140,9 @@ export function useQuery() {
     }
   };
 
+  /**
+   * Clears the current active conversation session and resets message history.
+   */
   const clearSession = useCallback(() => {
     activeRequestIdRef.current += 1;
     setMessages([]);
@@ -125,6 +150,12 @@ export function useQuery() {
     setError(null);
   }, []);
 
+  /**
+   * Restores a previously saved conversation session into the active view.
+   *
+   * @param newMessages - The array of historical messages to restore
+   * @param nextConversationId - The ID of the conversation to restore
+   */
   const restoreSession = useCallback((newMessages: ChatMessage[], nextConversationId: string | null) => {
     activeRequestIdRef.current += 1;
     setMessages(newMessages);

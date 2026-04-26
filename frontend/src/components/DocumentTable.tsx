@@ -1,6 +1,12 @@
+/**
+ * UI component for document table. Encapsulates rendering logic and user interactions for this feature.
+ */
 import type { DocumentItem } from '../types';
 import { normalizeMojibakeText } from '../lib/text';
 
+/**
+ * Props for the DocumentTable component.
+ */
 type DocumentTableProps = {
   documents: DocumentItem[];
   loading: boolean;
@@ -9,6 +15,14 @@ type DocumentTableProps = {
   onDelete: (id: string) => Promise<void>;
 };
 
+/**
+ * A UI component that displays a table of uploaded documents.
+ * Shows metadata like document name, processing status, chunk count, and creation date.
+ * Allows users to select documents for filtering queries and provides a delete action.
+ *
+ * @param props - Component properties conforming to DocumentTableProps
+ * @returns The rendered DocumentTable React element
+ */
 function statusClass(status: DocumentItem['status']): string {
   if (status === 'ready') return 'status status-ready';
   if (status === 'processing') return 'status status-processing';

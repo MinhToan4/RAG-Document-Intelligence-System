@@ -1,3 +1,6 @@
+/**
+ * Frontend utility module for API access. Provides reusable helpers and API utilities.
+ */
 import type {
   AuthResponse,
   AuthUser,
@@ -158,6 +161,12 @@ export function clearAuth(options?: { notifySessionExpired?: boolean }) {
   }
 }
 
+/**
+ * Registers a new user and automatically logs them in by saving the auth tokens.
+ *
+ * @param payload - The registration details
+ * @returns A promise resolving to the AuthResponse
+ */
 export async function register(payload: {
   username: string;
   email: string;
@@ -176,6 +185,12 @@ export async function register(payload: {
   return parsed;
 }
 
+/**
+ * Authenticates a user and saves the returned JWT tokens in local storage.
+ *
+ * @param payload - The login credentials (username and password)
+ * @returns A promise resolving to the AuthResponse
+ */
 export async function login(payload: { username: string; password: string }): Promise<AuthResponse> {
   const response = await fetch(`${API_BASE}/api/auth/login`, {
     method: 'POST',
@@ -219,6 +234,12 @@ export async function updateProfile(payload: { fullName: string; password?: stri
   return user;
 }
 
+/**
+ * Fetches a paginated list of uploaded documents.
+ * Includes authentication headers in the request.
+ *
+ * @returns A promise resolving to the DocumentListResponse
+ */
 export async function fetchDocuments(): Promise<DocumentListResponse> {
   const response = await requestWithAuth(`${API_BASE}/api/documents?page=1&limit=50`, {
     headers: buildAuthHeaders(),
@@ -226,6 +247,13 @@ export async function fetchDocuments(): Promise<DocumentListResponse> {
   return parseAuthJson<DocumentListResponse>(response);
 }
 
+/**
+ * Uploads a file to the backend for document ingestion (chunking, embedding).
+ * Uses FormData to handle the multipart/form-data request.
+ *
+ * @param file - The native File object to upload
+ * @param name - Optional custom name for the document
+ */
 export async function uploadDocument(file: File, name?: string): Promise<void> {
   const form = new FormData();
   form.append('file', file);
@@ -248,6 +276,11 @@ export async function uploadDocument(file: File, name?: string): Promise<void> {
   }
 }
 
+/**
+ * Deletes a specific document from the system.
+ *
+ * @param id - The ID of the document to delete
+ */
 export async function deleteDocument(id: string): Promise<void> {
   const response = await requestWithAuth(`${API_BASE}/api/documents/${id}`, {
     method: 'DELETE',
@@ -278,6 +311,16 @@ export async function askQuestion(payload: {
   return parseAuthJson<QueryResponse>(response);
 }
 
+/**
+ * Streams the response for a RAG question back to the frontend using Server-Sent Events (SSE).
+ * Connects to the `/api/query/stream` endpoint, reads chunks of the response as they arrive,
+ * and passes the tokens to the provided callbacks for real-time UI rendering.
+ *
+ * @param payload - The query parameters including question, history, and filters
+ * @param onToken - Callback triggered whenever a new text chunk (token) is received
+ * @param onComplete - Callback triggered when the stream finishes successfully
+ * @param onError - Callback triggered if the connection fails or an error is thrown
+ */
 export async function askQuestionStream(
   payload: {
     question: string;

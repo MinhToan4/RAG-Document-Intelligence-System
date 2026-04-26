@@ -1,14 +1,33 @@
+/**
+ * UI component for file uploader. Encapsulates rendering logic and user interactions for this feature.
+ */
 import { useState, type FormEvent } from 'react';
 
+/**
+ * Props for the FileUploader component.
+ */
 type FileUploaderProps = {
   disabled?: boolean;
   onUpload: (file: File, name?: string) => Promise<void>;
 };
 
+/**
+ * A UI component that provides a form for users to select and upload documents.
+ * Handles local state for the selected file and an optional display name.
+ *
+ * @param props - Component properties conforming to FileUploaderProps
+ * @returns The rendered FileUploader React element
+ */
 export function FileUploader({ disabled, onUpload }: FileUploaderProps) {
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState('');
 
+  /**
+   * Handles the form submission by preventing default behavior,
+   * triggering the parent onUpload callback, and resetting the form state.
+   *
+   * @param event - The form submission event
+   */
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!file) {

@@ -1,8 +1,14 @@
+/**
+ * UI component for query panel. Encapsulates rendering logic and user interactions for this feature.
+ */
 import { useState, type FormEvent } from 'react';
 import type { QuerySource } from '../types';
 import { normalizeMojibakeText } from '../lib/text';
 import { AnswerContent } from './AnswerContent';
 
+/**
+ * Props for the QueryPanel component.
+ */
 type QueryPanelProps = {
   loading: boolean;
   answer: string;
@@ -12,6 +18,13 @@ type QueryPanelProps = {
   onSubmit: (payload: { question: string; topK: number; documentIds?: string[] }) => Promise<void>;
 };
 
+/**
+ * A user interface component that provides an input form for asking questions,
+ * displays the generated answer, and lists the source chunks used to generate the answer.
+ *
+ * @param props - Component properties conforming to QueryPanelProps
+ * @returns The rendered QueryPanel React element
+ */
 export function QueryPanel({
   loading,
   answer,
@@ -23,6 +36,12 @@ export function QueryPanel({
   const [question, setQuestion] = useState('');
   const [topK, setTopK] = useState(5);
 
+  /**
+   * Handles the form submission by preventing default behavior, trimming input,
+   * and calling the parent-provided onSubmit callback.
+   *
+   * @param event - The form submission event
+   */
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!question.trim()) {

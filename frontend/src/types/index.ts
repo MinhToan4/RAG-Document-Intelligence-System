@@ -1,3 +1,6 @@
+/**
+ * Shared frontend type declarations used across components, hooks, and utilities.
+ */
 export type DocumentStatus = 'processing' | 'ready' | 'failed';
 
 export type DocumentItem = {

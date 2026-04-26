@@ -1,3 +1,6 @@
+/**
+ * Frontend utility module for text normalization. Provides reusable helpers and API utilities.
+ */
 function looksLikeMojibake(value: string): boolean {
   return /Ã.|Â.|á»|áº|Æ|Ð|�/.test(value);
 }

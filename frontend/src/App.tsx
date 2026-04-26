@@ -1,3 +1,6 @@
+/**
+ * Root application component that composes major UI sections and shared page-level state.
+ */
 import { useEffect, useMemo, useRef, useState, useCallback, type FormEvent, type KeyboardEvent } from 'react';
 import { AnswerContent } from './components/AnswerContent';
 import { useAuth } from './hooks/useAuth';
