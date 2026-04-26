@@ -3,7 +3,7 @@
  */
 import { env } from '../../config/env.js';
 import { logger } from '../../utils/logger.js';
-import type { IEmbeddingService } from './embedding.service.interface.js';
+import type { IEmbeddingService } from '../interfaces/embedding.service.interface.js';
 
 function normalizeVector(values: number[]): number[] {
   const magnitude = Math.sqrt(values.reduce((acc, val) => acc + val * val, 0)) || 1;

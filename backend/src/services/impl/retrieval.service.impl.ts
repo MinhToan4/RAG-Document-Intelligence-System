@@ -13,10 +13,10 @@ import {
   isListAvailableDocumentsIntent,
 } from '../../utils/language.js';
 import { EmbeddingServiceImpl } from './embedding.service.impl.js';
-import type { IEmbeddingService } from './embedding.service.interface.js';
+import type { IEmbeddingService } from '../interfaces/embedding.service.interface.js';
 import { GenerationServiceImpl } from './generation.service.impl.js';
-import type { IGenerationService } from './generation.service.interface.js';
-import type { AskInput, IRetrievalService } from './retrieval.service.interface.js';
+import type { IGenerationService } from '../interfaces/generation.service.interface.js';
+import type { AskInput, IRetrievalService } from '../interfaces/retrieval.service.interface.js';
 
 /**
  * Implementation of the Retrieval Service.

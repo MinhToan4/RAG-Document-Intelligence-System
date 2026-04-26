@@ -10,10 +10,10 @@ import { chunkText } from '../../utils/chunker.js';
 import { normalizeUploadedFilename } from '../../utils/filename.js';
 import { logger } from '../../utils/logger.js';
 import { EmbeddingServiceImpl } from './embedding.service.impl.js';
-import type { IEmbeddingService } from './embedding.service.interface.js';
-import type { IIngestionService, ListDocumentsInput } from './ingestion.service.interface.js';
+import type { IEmbeddingService } from '../interfaces/embedding.service.interface.js';
+import type { IIngestionService, ListDocumentsInput } from '../interfaces/ingestion.service.interface.js';
 import { ParserServiceImpl } from './parser.service.impl.js';
-import type { IParserService } from './parser.service.interface.js';
+import type { IParserService } from '../interfaces/parser.service.interface.js';
 
 /**
  * Implementation of the Ingestion Service.

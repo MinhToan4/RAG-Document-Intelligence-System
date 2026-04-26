@@ -6,7 +6,7 @@ import { AppError } from '../utils/app-error.js';
 import { ConversationRepository } from '../repositories/conversation.repository.js';
 import { QueryLogRepository } from '../repositories/query_log.repository.js';
 import { RetrievalServiceImpl } from '../services/impl/retrieval.service.impl.js';
-import type { IRetrievalService } from '../services/impl/retrieval.service.interface.js';
+import type { IRetrievalService } from '../services/interfaces/retrieval.service.interface.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 /**

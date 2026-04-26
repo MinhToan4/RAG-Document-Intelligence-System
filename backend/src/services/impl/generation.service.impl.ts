@@ -10,7 +10,7 @@ import {
 } from '../../utils/language.js';
 import { buildGroundedPrompt } from '../../utils/prompt.js';
 import { logger } from '../../utils/logger.js';
-import type { GenerationResult, IGenerationService } from './generation.service.interface.js';
+import type { GenerationResult, IGenerationService } from '../interfaces/generation.service.interface.js';
 
 type Provider = 'gemini' | 'groq';
 

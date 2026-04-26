@@ -8,7 +8,7 @@ import {
   uploadDocumentBodySchema,
 } from '../dtos/document.dto.js';
 import { IngestionServiceImpl } from '../services/impl/ingestion.service.impl.js';
-import type { IIngestionService } from '../services/impl/ingestion.service.interface.js';
+import type { IIngestionService } from '../services/interfaces/ingestion.service.interface.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 /**
@@ -16,7 +16,7 @@ import { asyncHandler } from '../utils/async-handler.js';
  * Provides endpoints to upload files, list processed documents, get document details, and manage document chunks.
  */
 export class DocumentController {
-  constructor(private readonly ingestionService: IIngestionService = new IngestionServiceImpl()) {}
+  constructor(private readonly ingestionService: IIngestionService = new IngestionServiceImpl()) { }
 
   /**
    * Handles uploading and ingesting a new document.

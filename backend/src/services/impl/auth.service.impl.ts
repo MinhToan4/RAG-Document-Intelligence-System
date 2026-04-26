@@ -8,7 +8,7 @@ import { UserRepository } from '../../repositories/user.repository.js';
 import { AppError } from '../../utils/app-error.js';
 import { generateAccessToken, generateRefreshToken, verifyTokenType } from '../../utils/jwt.js';
 import type { UserRecord } from '../../types/index.js';
-import type { AuthResult, IAuthService } from './auth.service.interface.js';
+import type { AuthResult, IAuthService } from '../interfaces/auth.service.interface.js';
 
 const BCRYPT_ROUNDS = 10;
 
@@ -18,7 +18,7 @@ const BCRYPT_ROUNDS = 10;
  * Uses bcrypt for secure password hashing and JWT for session management.
  */
 export class AuthServiceImpl implements IAuthService {
-  constructor(private readonly userRepository = new UserRepository()) {}
+  constructor(private readonly userRepository = new UserRepository()) { }
 
   /**
    * Registers a new user in the system.

@@ -8,7 +8,7 @@ import {
   registerRequestSchema,
 } from '../dtos/auth.dto.js';
 import { AuthServiceImpl } from '../services/impl/auth.service.impl.js';
-import type { IAuthService } from '../services/impl/auth.service.interface.js';
+import type { IAuthService } from '../services/interfaces/auth.service.interface.js';
 import { asyncHandler } from '../utils/async-handler.js';
 
 /**
@@ -16,7 +16,7 @@ import { asyncHandler } from '../utils/async-handler.js';
  * Responsible for user registration, login, token refresh, introspection, and profile updates.
  */
 export class AuthController {
-  constructor(private readonly authService: IAuthService = new AuthServiceImpl()) {}
+  constructor(private readonly authService: IAuthService = new AuthServiceImpl()) { }
 
   /**
    * Handles user registration.

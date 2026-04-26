@@ -4,7 +4,7 @@
 import fs from 'node:fs/promises';
 import mammoth from 'mammoth';
 import pdfParse from 'pdf-parse';
-import type { IParserService } from './parser.service.interface.js';
+import type { IParserService } from '../interfaces/parser.service.interface.js';
 
 /**
  * Implementation of the Parser Service.
